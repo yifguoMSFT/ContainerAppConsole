@@ -1,0 +1,17 @@
+{
+    "metadata": {
+        "name": "simple-server-deployment-dccb4c7b8-fxlx9",
+        "uid": "596ac52d-a2ec-4468-bdd1-e61a5c051a2c",
+        "namespace": "default"
+    },
+    "log_directory": "/var/log/pods/default_simple-server-deployment-dccb4c7b8-fxlx9_596ac52d-a2ec-4468-bdd1-e61a5c051a2c",
+    "linux": {
+        "cgroup_parent": "/kubepods/besteffort/pod596ac52d-a2ec-4468-bdd1-e61a5c051a2c",
+        "security_context": {
+            "namespace_options": {
+                "pid": 1
+            },
+            "seccomp_profile_path": "runtime/default"
+        }
+    }
+}
