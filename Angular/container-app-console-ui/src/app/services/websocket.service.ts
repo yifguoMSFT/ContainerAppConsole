@@ -23,5 +23,10 @@ export class WebsocketService {
     public sendMessage(command: string) {
         this.webSocketSubject.next(command);
     }
+
+    public setContainer(containerId: string) {
+        const command = "set-container " + containerId;
+        this.sendMessage(command);
+    }
 }
 
