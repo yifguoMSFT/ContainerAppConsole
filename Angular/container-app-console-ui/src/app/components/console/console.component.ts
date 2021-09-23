@@ -38,6 +38,7 @@ export class ConsoleComponent implements OnDestroy, OnInit {
       this.consoleText = this.defaultConsoleText + "<br>" + this.prefix;
     } else if (this.command.toLowerCase() === "reset") {
       this._websocketService.sendMessage("reset");
+      this.updateConsoleText("reset<br>");
     }
     else {
       this.updateConsoleText(this.command);
