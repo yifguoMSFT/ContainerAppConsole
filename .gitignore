@@ -2,3 +2,6 @@
 /SimpleServer/SimpleServer/SimpleServer.csproj.user
 /SimpleServer/SimpleServer/bin
 /SimpleServer/SimpleServer/obj
+/ConsoleApi/.vs
+/ConsoleApi/obj
+/ConsoleApi/bin

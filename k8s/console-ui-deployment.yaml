@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console-ui-deployment
+  labels:
+    app: console-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: console-ui
+  template:
+    metadata:
+      labels:
+        app: console-ui
+    spec:
+      containers:
+      - name: console-ui
+        image: huxiaoxu/containerappconsoleui
+        ports:
+        - containerPort: 80

@@ -2,11 +2,11 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    service.beta.kubernetes.io/azure-dns-label-name: simple-server
-  name: simple-server-svc
+    service.beta.kubernetes.io/azure-dns-label-name: console-ui
+  name: console-ui-nginx-svc
 spec:
   type: LoadBalancer
   ports:
   - port: 80
   selector:
-    app: simple-server
+    app: console-ui
