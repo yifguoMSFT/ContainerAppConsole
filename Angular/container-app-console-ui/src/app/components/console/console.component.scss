@@ -1,0 +1,20 @@
+.console-main {
+    padding-top: 20vh;
+    padding-left: 30vw;
+    font-size: 14px;
+}
+.console {
+    background-color: black;
+    color: aliceblue;
+    padding: 0px 5px;
+}
+
+.console-input {
+    outline: none;
+    width: 100%;
+}
+
+.console-content {
+    height:400px;
+    overflow-y: auto;
+}
