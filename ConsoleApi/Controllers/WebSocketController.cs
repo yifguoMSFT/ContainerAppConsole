@@ -83,6 +83,7 @@ namespace ConsoleApi
                     {
                         throw new Exception("webSocket connection failed");
                     }
+                    await consoleManager.SendAsync(@"cd /");
                     await consoleManager.SendAsync(@"echo end of child process\|$(hostname):$(pwd)");
                     while (webSocket.IsConnected)
                     {
@@ -93,7 +94,7 @@ namespace ConsoleApi
                         }
                         var splitted = input.Split(' ', 2);
                         string cmd = splitted[0];
-                        
+
                         if (cmd == "run" && splitted.Length == 2)
                         {
                             await consoleManager.SendAsync(splitted[1]);
@@ -102,6 +103,12 @@ namespace ConsoleApi
                                 busy = true;
                                 await consoleManager.SendAsync(@"echo end of child process\|$(hostname):$(pwd)");
                             }
+                        }
+                        else if (cmd == "reset")
+                        {
+                            consoleManager.Reset();
+                            await consoleManager.SendAsync(@"cd /");
+                            await consoleManager.SendAsync(@"echo end of child process\|$(hostname):$(pwd)");
                         }
                         else
                         {

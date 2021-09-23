@@ -13,8 +13,37 @@ namespace ConsoleApi
 
         private StringBuilder output;
         private StringBuilder error;
+        private Action<string> outputReciever;
+
         public ConsoleManager(Action<string> outputReciever)
         {
+            this.outputReciever = outputReciever;
+            Reset();
+        }
+
+        public Task SendAsync(string msg)
+        {
+            return process.StandardInput.WriteLineAsync(msg);
+        }
+
+        public void Dispose()
+        {
+            process.Kill();
+            process.Dispose();
+        }
+
+        public enum State
+        {
+            Ready,
+            Busy
+        }
+
+        public void Reset()
+        {
+            if (process != null)
+            {
+                Dispose();
+            }
             process = new Process();
             process.StartInfo = new ProcessStartInfo("bash")
             {
@@ -47,22 +76,6 @@ namespace ConsoleApi
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-        }
-
-        public Task SendAsync(string msg)
-        {
-            return process.StandardInput.WriteLineAsync(msg);
-        }
-
-        public void Dispose()
-        {
-            process.Dispose();
-        }
-
-        public enum State
-        {
-            Ready,
-            Busy
         }
     }
 }
