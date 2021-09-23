@@ -34,17 +34,18 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
   onCommandEnter() {
     if (this.command === "") return;
-    if(this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
+    if (this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
       this.consoleText = this.defaultConsoleText;
-      this.command = "";
+    } else {
+      this.updateConsolePrefix();
+      const message = "run " + this.command;
+      this._websocketService.sendMessage(message);
     }
-    const message = "run " + this.command;
-    this._websocketService.sendMessage(message);
     this.command = "";
   }
 
   private updateConsoleText(text: string) {
-    this.consoleText = this.consoleText + "<br>" + `${this.prefix} ${this.command}` + "<br>" + `${text}` + "<br>";
+    this.consoleText = this.consoleText + "<br>" + `${text}`;
   }
 
   private updatePrefix(prefix: string) {
@@ -73,6 +74,10 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   private scrollToBottom() {
     const scrollHeight = this.consoleComponent.nativeElement.scrollHeight;
     this.consoleComponent.nativeElement.scrollTop = scrollHeight + 200;
+  }
+
+  private updateConsolePrefix() {
+    this.consoleText = this.consoleText + "<br>" + `${this.prefix} ${this.command}`;
   }
 
   //Ctrl + C to stop running command
