@@ -79,6 +79,11 @@ namespace ConsoleApi
                 {
 
                     string input = null;
+                    if (!webSocket.IsConnected)
+                    {
+                        throw new Exception("webSocket connection failed");
+                    }
+                    await consoleManager.SendAsync(@"echo end of child process\|$(hostname):$(pwd)");
                     while (webSocket.IsConnected)
                     {
                         input = await webSocket.RecvAsync();

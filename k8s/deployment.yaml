@@ -20,9 +20,15 @@ spec:
       containers:
       - name: simple-server
         image: jeffgyf/simpleserver
+        env:
+          - name: CONTAINER_NAME
+            value: "simple-server"
         ports:
         - containerPort: 80
       - name: sidecar
         image: jeffgyf/consoleapi
+        env:
+          - name: CONTAINER_NAME
+            value: "sidecar"
         ports:
         - containerPort: 10080
