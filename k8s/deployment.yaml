@@ -1,21 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: simple-server-deployment
+  name: simple-server
   labels:
     app: simple-server
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: simple-server
+  #pod template
   template:
     metadata:
       labels:
         app: simple-server
+        property: console-enabled
     spec:
+      shareProcessNamespace: true
       containers:
       - name: simple-server
         image: jeffgyf/simpleserver
         ports:
         - containerPort: 80
+      - name: sidecar
+        image: jeffgyf/consoleapi
+        ports:
+        - containerPort: 10080
