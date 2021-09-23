@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
+import { Message, MessageVerb } from '../../models/Message';
 
 @Component({
   selector: 'app-console',
@@ -8,8 +9,9 @@ import { WebsocketService } from '../../services/websocket.service';
 })
 export class ConsoleComponent implements OnDestroy, OnInit {
   title = 'container-app-console-ui';
-  currentPath: string = "D:/";
-  consoleText: string = `Thank you for Using Container App Console`;
+  prefix: string = "D:/";
+  defaultConsoleText: string = `Thank you for Using Container App Console`;
+  consoleText: string = this.defaultConsoleText;
   command: string = "cmd";
   constructor(private _websocketService: WebsocketService) { }
 
@@ -17,7 +19,7 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
   ngOnInit() {
     this._websocketService.webSocketSubject.subscribe(
-      (msg => {
+      ((msg: Message) => {
         this.processSocketMessage(msg);
       }),
       (err => {
@@ -32,22 +34,40 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
   onCommandEnter() {
     if (this.command === "") return;
-
-    //prefix with "run" to for command
-    const message = `run ${this.command}`;
+    if(this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
+      this.consoleText = this.defaultConsoleText;
+      this.command = "";
+    }
+    const message = "run " + this.command;
     this._websocketService.sendMessage(message);
-  }
-
-  private updateConsoleText(message: string) {
-    this.consoleText = this.consoleText + "<br>" + `${this.currentPath} ${this.command}` + "<br>" + `${message}` + "<br>";
     this.command = "";
   }
 
-  private processSocketMessage(message: any) {
-    //Todo, if it is text 
-    console.log(message);
-    this.updateConsoleText(message);
-    this.scrollToBottom();
+  private updateConsoleText(text: string) {
+    this.consoleText = this.consoleText + "<br>" + `${this.prefix} ${this.command}` + "<br>" + `${text}` + "<br>";
+  }
+
+  private updatePrefix(prefix: string) {
+    this.prefix = prefix;
+  }
+
+  private processSocketMessage(message: Message) {
+    const key: string = Object.keys(message)[0];
+    switch (key) {
+      case MessageVerb.error:
+        console.log("------------Error----------------");
+        console.log(message.error);
+        break;
+      case MessageVerb.text:
+        const text = message.text;
+        this.updateConsoleText(text);
+        this.scrollToBottom();
+        break;
+      case MessageVerb.prefix:
+        const prefix = message.prefix;
+        this.updatePrefix(prefix);
+        break;
+    }
   }
 
   private scrollToBottom() {

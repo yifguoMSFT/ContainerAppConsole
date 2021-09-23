@@ -3,7 +3,7 @@
     <div style="width: 50%;">
       <div #console [innerHTML]="consoleText" class="console console-content"></div>
       <div class="console" style="display: flex;">
-        <label for="input-command">>{{currentPath}}</label>
+        <label for="input-command">>{{prefix}}</label>
         <input class="console console-input" id="input-command" type="text" [(ngModel)]="command"
           (keyup.enter)="onCommandEnter()" (keydown.control.c)="terminate()">
       </div>

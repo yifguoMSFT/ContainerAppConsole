@@ -5,7 +5,7 @@ import { webSocket, WebSocketSubject } from "rxjs/webSocket";
 @Injectable({ providedIn: "root" })
 export class WebsocketService {
     private endpoint: string = "console-api.westus2.cloudapp.azure.com/console";
-    public webSocketSubject: WebSocketSubject<string | {}>;
+    public webSocketSubject: WebSocketSubject<any>;
 
     constructor(private _activatedRoute: ActivatedRoute) {
         const endpoint: string = this._activatedRoute.snapshot.queryParams["endpoint"];
