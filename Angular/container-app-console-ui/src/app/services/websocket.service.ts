@@ -2,12 +2,14 @@ import { Injectable } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { BehaviorSubject, Observable, of, Subject } from "rxjs";
 import { webSocket, WebSocketSubject } from "rxjs/webSocket";
-import { catchError, flatMap, map, mergeMap, switchMap, tap } from "rxjs/operators";
+import { switchMap } from "rxjs/operators";
 import { Message } from "../models/message";
+import { environment } from "../../environments/environment";
 
 @Injectable({ providedIn: "root" })
 export class WebsocketService {
-    private endpoint: string = "console-api.westus2.cloudapp.azure.com/console";
+    // private endpoint: string = "console-api-v2.westus2.cloudapp.azure.com/console";
+    private endpoint: string = environment.endpoint
     public webSocketSubject: Observable<string | Message>;
     public resetSocketSubject: Subject<boolean> = new BehaviorSubject(false);
 
@@ -18,14 +20,12 @@ export class WebsocketService {
         if (endpoint && endpoint.length > 0) {
             this.endpoint = endpoint;
         }
-        const url = `ws://${this.endpoint}`;
-        this.webSocketSubject = webSocket(url);
 
         this.webSocketSubject = this.resetSocketSubject.pipe(
-            switchMap((closeWebSocket: boolean) => {
+            switchMap((_: boolean) => {
                 if (this.websocket) this.websocket.complete();
 
-                const url = `ws://${this.endpoint}`;
+                const url = `ws://${this.endpoint}/console`;
                 this.websocket = webSocket(url);
                 return this.websocket;
             })
@@ -47,14 +47,14 @@ export class WebsocketService {
     }
 
 
-    public setPod(podId: string) {
-        const command = "set-pod " + podId;
+    public setNode(nodeIp: string) {
+        const command = "set-node " + nodeIp;
         this.sendMessage(command);
-        console.log("set-pod", podId);
+        console.log("set-node", nodeIp);
     }
 
-    public setPodAndContainer(podId: string, containerId: string) {
-        this.setPod(podId);
+    public setNodeAndContainer(nodeIp: string, containerId: string) {
+        this.setNode(nodeIp);
         this.setContainer(containerId);
     }
 

@@ -1,14 +1,26 @@
 <div class="console-main">
     <h2>Container App Console</h2>
     <div style="width: 50%;">
-        <mat-form-field>
-            <mat-label>Choose Container</mat-label>
-            <mat-select [value]="selectedContainerId" (selectionChange)="selectContainer($event)">
-                <mat-option *ngFor="let container of containers" [value]="container.Pid">
-                    {{container.Name}}
-                </mat-option>
-            </mat-select>
-        </mat-form-field>
+        <div style="font-size: 16px;">
+            <mat-form-field>
+                <mat-label>Choose Pod</mat-label>
+                <mat-select [(value)]="selectedPod" (selectionChange)="selectPod($event)">
+                    <mat-option *ngFor="let pod of pods" [value]="pod">
+                        {{pod.name}}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+
+            <mat-form-field style="margin-left: 50px;">
+                <mat-label>Choose Container</mat-label>
+                <mat-select [(value)]="selectedContainer" (selectionChange)="selectContainer($event)"
+                    [disabled]="disableSelectContainer">
+                    <mat-option *ngFor="let container of containers" [value]="container">
+                        {{container.name}}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
 
         <div #console [innerHTML]="consoleText" class="console console-content"></div>
         <div class="console" style="display: flex; justify-content:space-between;">

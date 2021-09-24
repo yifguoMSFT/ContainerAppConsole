@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
 import { Message, MessageVerb } from '../../models/message';
 import { ApiService } from '../../services/api.service';
-import { Container } from 'src/app/models/element';
+import { Container, Pod } from 'src/app/models/element';
 
 @Component({
   selector: 'app-console',
@@ -16,13 +16,18 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   command: string = "";
 
   containers: Container[] = [];
-  private set _selectedContainerId(id: string) {
-    this.selectedContainerId = id;
+  private _selectedContainer: Container;
+  set selectedContainer(container: Container) {
+    this._selectedContainer = container;
     this._websocketService.resetWebSocket();
-    this._websocketService.setPodAndContainer(this.selectedPodId, id);
+    //Need node ip and container id
+    this._websocketService.setNodeAndContainer(this.selectedPod.ip, container.id);
   }
-  selectedContainerId: string = "";
-  selectedPodId: string = "12";
+
+  disableSelectContainer: boolean = true;
+
+  pods: Pod[] = [];
+  selectedPod: Pod;
   constructor(private _websocketService: WebsocketService, private _apiService: ApiService) { }
 
   @ViewChild("console") consoleComponent: any;
@@ -41,11 +46,8 @@ export class ConsoleComponent implements OnDestroy, OnInit {
       }
     );
 
-    this._apiService.getContainers().subscribe(containers => {
-      this.containers = containers;
-
-      // this.selectedContainerId = containers[0].Pid;
-      this._selectedContainerId = containers[0].Pid;
+    this._apiService.getPods().subscribe(pods => {
+      this.pods = pods;
     })
 
     this.focusToInput();
@@ -72,7 +74,7 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   }
 
   private updatePrefix(prefix: string) {
-    this.prefix = `${this.selectedContainerId}@${prefix}`;
+    this.prefix = `${this._selectedContainer.name}@${prefix}`;
     this.consoleText = this.consoleText + this.prefix + "# ";
   }
 
@@ -108,12 +110,18 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
 
   selectContainer(e: { value: string }) {
-    const containerId = e.value;
-    this._selectedContainerId = containerId;
-
-    if(this.consoleText.length > 0) {
+    if (this.consoleText.length > 0) {
       this.consoleText = this.consoleText + "<br><br>";
     }
+  }
+
+  selectPod(e: { value: Pod }) {
+    const pod = e.value;
+    this.disableSelectContainer = true;
+    this._apiService.getContainers(pod.id, pod.ip).subscribe(containers => {
+      this.containers = containers;
+      this.disableSelectContainer = false;
+    });
   }
 
   ngOnDestroy() {
