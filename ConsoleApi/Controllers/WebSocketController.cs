@@ -95,10 +95,7 @@ namespace ConsoleApi
                             while (webSocket.IsConnected && consoleManager.IsRunning)
                             {
                                 input = await webSocket.RecvAsync();
-                                if (input.StartsWith('"') && input.EndsWith('"'))
-                                {
-                                    input = input.Substring(1, input.Length - 2);
-                                }
+                                input = RemoveStartAndEndQutation(input);
                                 var splitted = input.Split(' ', 2);
                                 string cmd = splitted[0];
 
@@ -151,6 +148,7 @@ namespace ConsoleApi
             try
             {
                 var input = await webSocket.RecvAsync();
+                input = RemoveStartAndEndQutation(input);
                 if (!input.StartsWith("set-pod"))
                 {
                     throw new Exception("the first operation must be set-pod [pod name]");
@@ -158,6 +156,7 @@ namespace ConsoleApi
                 string pod = input.Split(' ', 2)[1];
 
                 input = await webSocket.RecvAsync();
+                input = RemoveStartAndEndQutation(input);
                 if (!input.StartsWith("set-container"))
                 {
                     throw new Exception("the second operation must be set-container [container pid]");
@@ -194,6 +193,15 @@ namespace ConsoleApi
                 }
                 await consoleManager.SendAsync($"chmod 544 /proc/{pid}/root/bash-static");
             }
+        }
+
+        private string RemoveStartAndEndQutation(string input)
+        {
+            if (input.StartsWith('"') && input.EndsWith('"'))
+            {
+                input = input.Substring(1, input.Length - 2);
+            }
+            return input;
         }
     }
 }
