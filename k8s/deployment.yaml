@@ -25,10 +25,12 @@ spec:
             value: "simple-server"
         ports:
         - containerPort: 80
-      - name: sidecar
-        image: jeffgyf/consoleapi
+      - name: empty-container
+        image: google/pause
         env:
           - name: CONTAINER_NAME
-            value: "sidecar"
+            value: "empty-container"
+      - name: sidecar
+        image: jeffgyf/consoleapi
         ports:
         - containerPort: 10080

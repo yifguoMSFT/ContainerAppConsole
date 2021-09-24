@@ -86,7 +86,7 @@ namespace ConsoleApi
                             {
                                 await webSocket.SendAsync(JsonSerializer.Serialize(new { text = s }));
                             }
-                        }, pid))
+                        }, pid, Environment.GetEnvironmentVariable("CONSOLE_API_PRIVILEGED_MODE") == "true"))
                         {
                             await consoleManager.SendAsync(@"cd /");
                             await consoleManager.SendAsync(@"echo end of child process\|$HOSTNAME:$(pwd)");
