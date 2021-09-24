@@ -43,6 +43,12 @@ namespace ConsoleApi
             }
         }
 
+        [Route("pods")]
+        public async Task<IActionResult> GetPods()
+        {
+            throw new NotImplementedException();
+        }
+
         private class ContainerInfo
         {
             public string Name;
