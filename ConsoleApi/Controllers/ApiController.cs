@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ConsoleApi
 {
@@ -46,7 +47,17 @@ namespace ConsoleApi
         [Route("pods")]
         public async Task<IActionResult> GetPods()
         {
-            throw new NotImplementedException();
+            try
+            {
+                string result = await ProcessManager.RunAsync("nsenter", "--target 1 --pid --ipc --mount --uts --net -- crictl pods -o json");
+                var json = JsonConvert.DeserializeObject<JToken>(result);
+                var pods = json["items"].Select(t => new { name = t["metadata"]["name"], uid = t["metadata"]["uid"] });
+                return Ok(JsonConvert.SerializeObject(pods));
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, JsonConvert.SerializeObject(e));
+            }
         }
 
         private class ContainerInfo
