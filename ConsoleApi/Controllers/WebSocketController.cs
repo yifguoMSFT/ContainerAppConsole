@@ -95,10 +95,6 @@ namespace ConsoleApi
                             while (webSocket.IsConnected && consoleManager.IsRunning)
                             {
                                 input = await webSocket.RecvAsync();
-                                if (input.StartsWith('"') && input.EndsWith('"'))
-                                {
-                                    input = input.Substring(1, input.Length - 2);
-                                }
                                 var splitted = input.Split(' ', 2);
                                 string cmd = splitted[0];
 

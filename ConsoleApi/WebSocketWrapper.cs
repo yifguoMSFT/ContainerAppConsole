@@ -62,6 +62,11 @@ namespace ConsoleApi
             {
                 await CloseAsync();
             }
+
+            if (s.StartsWith('"') && s.EndsWith('"'))
+            {
+                s = s.Substring(1, s.Length - 2);
+            }
             return s;
         }
 
