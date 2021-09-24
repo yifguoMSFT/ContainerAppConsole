@@ -8,11 +8,10 @@ import { Message, MessageVerb } from '../../models/Message';
   styleUrls: ['./console.component.scss']
 })
 export class ConsoleComponent implements OnDestroy, OnInit {
-  title = 'container-app-console-ui';
-  prefix: string = "D:/";
-  defaultConsoleText: string = `Thank you for Using Container App Console`;
+  prefix: string = "";
+  defaultConsoleText: string = "";
   consoleText: string = this.defaultConsoleText;
-  command: string = "cmd";
+  command: string = "";
   constructor(private _websocketService: WebsocketService) { }
 
   @ViewChild("console") consoleComponent: any;
@@ -30,14 +29,19 @@ export class ConsoleComponent implements OnDestroy, OnInit {
         this._websocketService.close();
       }
     );
+    this.focusToInput();
   }
 
   onCommandEnter() {
-    if (this.command === "") return;
+    // if (this.command === "") return;
     if (this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
-      this.consoleText = this.defaultConsoleText;
-    } else {
-      this.updateConsolePrefix();
+      this.consoleText = this.defaultConsoleText + "<br>" + this.prefix;
+    } else if (this.command.toLowerCase() === "reset") {
+      this._websocketService.sendMessage("reset");
+      this.updateConsoleText("reset<br>");
+    }
+    else {
+      this.updateConsoleText(this.command);
       const message = "run " + this.command;
       this._websocketService.sendMessage(message);
     }
@@ -45,11 +49,12 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   }
 
   private updateConsoleText(text: string) {
-    this.consoleText = this.consoleText + "<br>" + `${text}`;
+    this.consoleText = this.consoleText + `${text}` + "<br>";
   }
 
   private updatePrefix(prefix: string) {
     this.prefix = prefix;
+    this.consoleText = this.consoleText + prefix + "# ";
   }
 
   private processSocketMessage(message: Message) {
@@ -73,16 +78,17 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
   private scrollToBottom() {
     const scrollHeight = this.consoleComponent.nativeElement.scrollHeight;
-    this.consoleComponent.nativeElement.scrollTop = scrollHeight + 200;
-  }
-
-  private updateConsolePrefix() {
-    this.consoleText = this.consoleText + "<br>" + `${this.prefix} ${this.command}`;
+    this.consoleComponent.nativeElement.scrollTop = scrollHeight + 400;
   }
 
   //Ctrl + C to stop running command
   terminate() {
     // this._websocketService.sendMessage("signal SIGINT");
+  }
+
+  private focusToInput() {
+    const ele = document.getElementById("input-command");
+    if (ele) ele.focus();
   }
 
   ngOnDestroy() {
