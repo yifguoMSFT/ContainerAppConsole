@@ -11,7 +11,7 @@ export class WebsocketService {
     // private endpoint: string = "console-api-v2.westus2.cloudapp.azure.com/console";
     private endpoint: string = environment.endpoint
     public webSocketSubject: Observable<string | Message>;
-    public resetSocketSubject: Subject<boolean> = new BehaviorSubject(false);
+    public resetSocketSubject: Subject<boolean> = new Subject();
 
     private websocket: WebSocketSubject<string | Message> = null;
 

@@ -71,11 +71,13 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
   private updateConsoleText(text: string) {
     this.consoleText = this.consoleText + `${text}` + "<br>";
+    this.scrollToBottom();
   }
 
   private updatePrefix(prefix: string) {
     this.prefix = `${this._selectedContainer.name}@${prefix}`;
     this.consoleText = this.consoleText + this.prefix + "# ";
+    this.scrollToBottom();
   }
 
   private processSocketMessage(message: Message) {
@@ -88,7 +90,6 @@ export class ConsoleComponent implements OnDestroy, OnInit {
       case MessageVerb.text:
         const text = message.text;
         this.updateConsoleText(text);
-        this.scrollToBottom();
         break;
       case MessageVerb.prefix:
         const prefix = message.prefix;
@@ -98,8 +99,10 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   }
 
   private scrollToBottom() {
-    const scrollHeight = this.consoleComponent.nativeElement.scrollHeight;
-    this.consoleComponent.nativeElement.scrollTop = scrollHeight + 400;
+    setTimeout(() => {
+      const scrollHeight = this.consoleComponent.nativeElement.scrollHeight;
+      this.consoleComponent.nativeElement.scrollTop = scrollHeight;
+    }, 10);
   }
 
 
