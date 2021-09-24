@@ -4,10 +4,12 @@ import { BehaviorSubject, Observable, of, Subject } from "rxjs";
 import { webSocket, WebSocketSubject } from "rxjs/webSocket";
 import { switchMap } from "rxjs/operators";
 import { Message } from "../models/message";
+import { environment } from "../../environments/environment";
 
 @Injectable({ providedIn: "root" })
 export class WebsocketService {
-    private endpoint: string = "console-api-v2.westus2.cloudapp.azure.com/console";
+    // private endpoint: string = "console-api-v2.westus2.cloudapp.azure.com/console";
+    private endpoint: string = environment.endpoint
     public webSocketSubject: Observable<string | Message>;
     public resetSocketSubject: Subject<boolean> = new BehaviorSubject(false);
 
@@ -23,7 +25,7 @@ export class WebsocketService {
             switchMap((_: boolean) => {
                 if (this.websocket) this.websocket.complete();
 
-                const url = `ws://${this.endpoint}`;
+                const url = `ws://${this.endpoint}/console`;
                 this.websocket = webSocket(url);
                 return this.websocket;
             })

@@ -1,11 +1,10 @@
 export interface Container {
-    Pid: string;
-    Name: string;
-    Uid: string;
+    name: string;
+    id: string;
 }
 
 export interface Pod {
     name: string;
-    uid: string;
-    ip:string;
+    id: string;
+    ip: string;
 }

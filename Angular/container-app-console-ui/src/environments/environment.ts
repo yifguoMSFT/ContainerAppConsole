@@ -3,7 +3,8 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  endpoint: "console-api-v2.westus2.cloudapp.azure.com",
 };
 
 /*

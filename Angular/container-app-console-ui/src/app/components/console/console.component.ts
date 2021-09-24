@@ -20,8 +20,8 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   set selectedContainer(container: Container) {
     this._selectedContainer = container;
     this._websocketService.resetWebSocket();
-    //Need node ip and container uid
-    this._websocketService.setNodeAndContainer(this.selectedPod.ip, container.Uid);
+    //Need node ip and container id
+    this._websocketService.setNodeAndContainer(this.selectedPod.ip, container.id);
   }
 
   disableSelectContainer: boolean = true;
@@ -74,7 +74,7 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   }
 
   private updatePrefix(prefix: string) {
-    this.prefix = `${this._selectedContainer.Name}@${prefix}`;
+    this.prefix = `${this._selectedContainer.name}@${prefix}`;
     this.consoleText = this.consoleText + this.prefix + "# ";
   }
 
@@ -118,7 +118,7 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   selectPod(e: { value: Pod }) {
     const pod = e.value;
     this.disableSelectContainer = true;
-    this._apiService.getContainers(pod.uid, pod.ip).subscribe(containers => {
+    this._apiService.getContainers(pod.id, pod.ip).subscribe(containers => {
       this.containers = containers;
       this.disableSelectContainer = false;
     });

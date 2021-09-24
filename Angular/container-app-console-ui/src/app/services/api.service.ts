@@ -1,23 +1,23 @@
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
-import { Observable, of } from "rxjs";
-import { delay } from "rxjs/operators";
+import { Observable } from "rxjs";
+import { environment } from "../../environments/environment";
 import { Container, Pod } from "../models/element";
 
 @Injectable({ providedIn: "root" })
 export class ApiService {
-    private readonly endpoint = "http://console-api.westus2.cloudapp.azure.com/api";
+    private readonly endpoint = `http://${environment.endpoint}`;
     constructor(private _httpClient: HttpClient) { }
 
-    public getContainers(uid: string, ip: string): Observable<Container[]> {
-        //Todo, query string
-        return this._httpClient.get<Container[]>(`${this.endpoint}/containers`);
+    public getContainers(id: string, ip: string): Observable<Container[]> {
+        let httpParams = new HttpParams().appendAll({
+            "id":id,
+            "ip":ip
+        })
+        return this._httpClient.get<Container[]>(`${this.endpoint}/api/containers`, { params:  httpParams});
     }
 
     public getPods(): Observable<Pod[]> {
-        //For test
-        return this._httpClient.get<Pod[]>("http://console-api-v2.westus2.cloudapp.azure.com/api/pods");
-
-        return this._httpClient.get<Pod[]>(`${this.endpoint}/pods`);
+        return this._httpClient.get<Pod[]>(`${this.endpoint}/api/pods`);
     }
 }

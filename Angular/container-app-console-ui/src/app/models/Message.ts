@@ -1,7 +1,4 @@
-//Message only with one key-value pair
-export type Message = {
-    [key in MessageVerb]: string
-}
+export type Message = Partial<Record<MessageVerb,string>>;
 
 export enum MessageVerb {
     prefix = "prefix",

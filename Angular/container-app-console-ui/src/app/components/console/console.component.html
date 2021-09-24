@@ -16,7 +16,7 @@
                 <mat-select [(value)]="selectedContainer" (selectionChange)="selectContainer($event)"
                     [disabled]="disableSelectContainer">
                     <mat-option *ngFor="let container of containers" [value]="container">
-                        {{container.Name}}
+                        {{container.name}}
                     </mat-option>
                 </mat-select>
             </mat-form-field>
