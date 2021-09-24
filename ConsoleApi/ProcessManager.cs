@@ -9,7 +9,7 @@ namespace ConsoleApi
 {
     public static class ProcessManager
     {
-        public static async Task<string> Run(string cmd, string args)
+        public static async Task<string> RunAsync(string cmd, string args)
         {
             var process = new Process();
             process.StartInfo = new ProcessStartInfo(cmd)

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: pod-analyzer-daemon
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      name: pod-analyzer
+  template:
+    metadata:
+      labels:
+        name: pod-analyzer
+    spec:
+      hostPID: true
+      containers:
+      - name: pod-analyzer
+        image: jeffgyf/consoleapi
+        env:
+          - name: CONSOLE_API_PRIVILEGED_MODE
+            value: "true"
+        securityContext:
+          privileged: true
+        stdin: true
+        stdinOnce: true
+        tty: true
