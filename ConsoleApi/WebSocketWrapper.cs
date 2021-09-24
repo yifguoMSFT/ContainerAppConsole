@@ -11,14 +11,14 @@ namespace ConsoleApi
     public class WebSocketWrapper:IDisposable
     {
         private byte[] buffer;
-        private WebSocket webSocket;
+        public WebSocket WebSocket;
 
         private bool isConnected = false;
         public bool IsConnected => isConnected;
-        public WebSocketWrapper(int bufferSize, WebSocket webSocket)
+        public WebSocketWrapper(WebSocket webSocket, int? bufferSize = null, byte[] buffer = null)
         {
-            this.webSocket = webSocket;
-            this.buffer = new byte[bufferSize];
+            this.WebSocket = webSocket;
+            this.buffer = buffer ?? new byte[bufferSize.Value];
             if (webSocket.State == WebSocketState.Open)
             {
                 isConnected = true;
@@ -33,7 +33,7 @@ namespace ConsoleApi
         {
             try
             {
-                webSocket.Dispose();
+                WebSocket.Dispose();
             }
             catch (Exception e)
             { 
@@ -43,12 +43,12 @@ namespace ConsoleApi
         public Task SendAsync(string msg)
         {
             var bytes = Encoding.UTF8.GetBytes(msg);
-            return webSocket.SendAsync(new ArraySegment<byte>(bytes, 0, bytes.Length), WebSocketMessageType.Text, true, CancellationToken.None); ;
+            return WebSocket.SendAsync(new ArraySegment<byte>(bytes, 0, bytes.Length), WebSocketMessageType.Text, true, CancellationToken.None); ;
         }
 
         public async Task<string> RecvAsync()
         {
-            var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            var result = await WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             string s = null;
             if (result.EndOfMessage)
             {
@@ -73,7 +73,7 @@ namespace ConsoleApi
         public Task CloseAsync()
         {
             isConnected = false;
-            return webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+            return WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
         }
 
         

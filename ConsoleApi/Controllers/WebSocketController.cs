@@ -1,13 +1,13 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,7 +45,7 @@ namespace ConsoleApi
         [HttpGet("/string-echo")]
         public async Task StringEcho()
         {
-            using (var webSocket = new WebSocketWrapper(4096, await HttpContext.WebSockets.AcceptWebSocketAsync()))
+            using (var webSocket = new WebSocketWrapper(await HttpContext.WebSockets.AcceptWebSocketAsync(), 4096))
             {
                 string s = null;
                 while (webSocket.IsConnected)
@@ -56,12 +56,12 @@ namespace ConsoleApi
             }
         }
 
-        [HttpGet("/console")]
-        public async Task Console()
+        [HttpGet("/inter-console")]
+        public async Task InterConsole()
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                using (var webSocket = new WebSocketWrapper(4096, await HttpContext.WebSockets.AcceptWebSocketAsync()))
+                using (var webSocket = new WebSocketWrapper(await HttpContext.WebSockets.AcceptWebSocketAsync(), 4096))
                 {
                     try
                     {
@@ -69,8 +69,19 @@ namespace ConsoleApi
                         {
                             throw new Exception("webSocket connection failed");
                         }
-                        
-                        (string pod, int pid) = await TryHandShakeAsync(webSocket);
+
+                        string containerId = await TrySecondHandShakeAsync(webSocket);
+                        string containerPid = await ProcessManager.RunAsync("nsenter", @"--target 1 --pid --ipc --mount --uts --net -- crictl inspect --output go-template --template {{.info.pid}} " + containerId);
+                        int pid;
+                        try
+                        {
+                            containerPid = containerPid.Trim();
+                            pid = int.Parse(containerPid);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new Exception($"failed to parse int {containerPid}");
+                        }
                         await TryPrepareStaticBashAsync(pid);
 
                         ConsoleManager consoleManager = null;
@@ -80,11 +91,11 @@ namespace ConsoleApi
                             {
                                 consoleManager.Busy = false;
                                 var splitted = s.Split('|');
-                                await webSocket.SendAsync(JsonSerializer.Serialize(new { prefix = splitted[1] }));
+                                await webSocket.SendAsync(JsonConvert.SerializeObject(new { prefix = splitted[1] }));
                             }
                             else
                             {
-                                await webSocket.SendAsync(JsonSerializer.Serialize(new { text = s }));
+                                await webSocket.SendAsync(JsonConvert.SerializeObject(new { text = s }));
                             }
                         }, pid, Environment.GetEnvironmentVariable("CONSOLE_API_PRIVILEGED_MODE") == "true"))
                         {
@@ -121,7 +132,54 @@ namespace ConsoleApi
                     {
                         if (webSocket.IsConnected)
                         {
-                            await webSocket.SendAsync(JsonSerializer.Serialize(new { error = e.Message }));
+                            await webSocket.SendAsync(JsonConvert.SerializeObject(new { error = e }));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            }
+        }
+
+
+
+        [HttpGet("/console")]
+        public async Task Console()
+        {
+            if (HttpContext.WebSockets.IsWebSocketRequest)
+            {
+                var buffer = new byte[4096];
+                using (var webSocket = new WebSocketWrapper(await HttpContext.WebSockets.AcceptWebSocketAsync(), buffer: buffer))
+                {
+                    try
+                    {
+                        if (!webSocket.IsConnected)
+                        {
+                            throw new Exception("webSocket connection failed");
+                        }
+                        
+                        string nodeIp = await TryFirstHandShakeAsync(webSocket);
+                        using (var interWebSocket = new ClientWebSocket())
+                        {
+                            await interWebSocket.ConnectAsync(new Uri($"ws://{nodeIp}:10080/inter-console"), CancellationToken.None);
+                            if (interWebSocket.State != WebSocketState.Open)
+                            {
+                                throw new Exception("Failed to connect to inter websocket");
+                            }
+
+                            using (var connector = new WebSocketConnecter(webSocket.WebSocket, interWebSocket, buffer, new byte[4096]))
+                            {
+                                await connector.ConnectAsync();
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (webSocket.IsConnected)
+                        {
+                            await webSocket.SendAsync(JsonConvert.SerializeObject(new { error = e }));
                         }
                     }
                 }
@@ -141,24 +199,36 @@ namespace ConsoleApi
 
        
 
-        private async Task<(string pod, int pid)> TryHandShakeAsync(WebSocketWrapper webSocket)
+        private async Task<string> TryFirstHandShakeAsync(WebSocketWrapper webSocket)
         {
             try
             {
                 var input = await webSocket.RecvAsync();
-                if (!input.StartsWith("set-pod"))
+                if (!input.StartsWith("set-node"))
                 {
-                    throw new Exception("the first operation must be set-pod [pod name]");
+                    throw new Exception("the first handshake must be set-node [node ip]");
                 }
-                string pod = input.Split(' ', 2)[1];
+                string ip = input.Split(' ', 2)[1];
 
-                input = await webSocket.RecvAsync();
+                return ip;
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"First handshake failed with exception: {e.Message}");
+            }
+        }
+
+        private async Task<string> TrySecondHandShakeAsync(WebSocketWrapper webSocket)
+        {
+            try
+            {
+                string input = await webSocket.RecvAsync();
                 if (!input.StartsWith("set-container"))
                 {
-                    throw new Exception("the second operation must be set-container [container pid]");
+                    throw new Exception("the second handshake must be set-container [container id]");
                 }
-                string pid = input.Split(' ', 2)[1];
-                return (pod, int.Parse(pid));
+                string id = input.Split(' ', 2)[1];
+                return id;
             }
             catch (Exception e)
             {

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Net;
+using System.Net.Http;
 
 namespace ConsoleApi
 {
@@ -22,37 +24,78 @@ namespace ConsoleApi
         }
 
         [Route("containers")]
-        public async Task<IActionResult> GetContainers(string podName = null)
+        public async Task<IActionResult> GetContainers(string id, string ip = null)
+        {
+            if (ip == null)
+            {
+                return await GetLocalContainers(id);
+            }
+            else
+            {
+                try
+                {
+                    var resp = await httpClient.GetAsync($"http://{ip}:10080/api/containers?id={id}");
+                    var conent = await resp.Content.ReadAsStringAsync();
+                    return Ok(conent);
+                }
+                catch (Exception e)
+                {
+                    return StatusCode(500, JsonConvert.SerializeObject(e));
+                }
+            }
+        }
+
+        [Route("local-containers")]
+        public async Task<IActionResult> GetLocalContainers(string id = null)
         {
             try
             {
-                var procs = new DirectoryInfo("/proc").GetDirectories().Where(d => int.TryParse(d.Name, out int pid) && pid != 1).ToList();
-                var containers = new List<ContainerInfo>();
-                foreach (var proc in procs)
-                {
-                    var result = await GetContainerNameAsync(proc);
-                    if (result != null)
-                    {
-                        containers.Add(result);
-                    }
-                }
+                string result = await ProcessManager.RunAsync("nsenter", $"--target 1 --pid --ipc --mount --uts --net -- crictl ps" + (id == null ? "":$" --pod {id}") + " -o json");
+                var json = JsonConvert.DeserializeObject<JToken>(result);
+                var containers = json["containers"].Select(t => new { name = t["metadata"]["name"], id = t["id"] }).OrderBy(t => t.name);
                 return Ok(JsonConvert.SerializeObject(containers));
             }
             catch (Exception e)
             {
-                return Ok(JsonConvert.SerializeObject(e));
+                return StatusCode(500, JsonConvert.SerializeObject(e));
             }
         }
 
+        private HttpClient httpClient = new HttpClient();
+
         [Route("pods")]
-        public async Task<IActionResult> GetPods()
+        public async Task<IActionResult> GetPods(bool local = false)
         {
             try
             {
-                string result = await ProcessManager.RunAsync("nsenter", "--target 1 --pid --ipc --mount --uts --net -- crictl pods -o json");
-                var json = JsonConvert.DeserializeObject<JToken>(result);
-                var pods = json["items"].Select(t => new { name = t["metadata"]["name"], uid = t["metadata"]["uid"] });
-                return Ok(JsonConvert.SerializeObject(pods));
+                if (local)
+                {
+                    string result = await ProcessManager.RunAsync("nsenter", "--target 1 --pid --ipc --mount --uts --net -- crictl pods -o json");
+                    var json = JsonConvert.DeserializeObject<JToken>(result);
+                    var pods = json["items"].Select(t => new { name = t["metadata"]["name"], id = t["id"] });
+                    return Ok(JsonConvert.SerializeObject(pods));
+                }
+                else
+                {
+                    var hostEntry = await Dns.GetHostEntryAsync("console-api-v2-headless");
+                    var ips = hostEntry.AddressList.Select(addr => addr.ToString()).ToList();
+
+                    var tasks = ips.Select(async ip =>
+                    {
+                        var resp = await httpClient.GetAsync($"http://{ip}:10080/api/pods?local=true");
+                        var conent = await resp.Content.ReadAsStringAsync();
+                        var json = JsonConvert.DeserializeObject<JToken>(conent);
+                        foreach (var item in json)
+                        {
+                            item["ip"] = ip;
+                        }
+                        return json;
+                    }).ToList();
+                    await Task.WhenAll(tasks);
+                    var result = tasks.SelectMany(t => t.Result).OrderBy(t => t["name"]);
+                    return Ok(JsonConvert.SerializeObject(result));
+                }
+                
             }
             catch (Exception e)
             {
