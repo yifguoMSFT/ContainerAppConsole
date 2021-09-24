@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApi
 {
-    public class ConsoleManager:IDisposable
+    public class ConsoleManager : IDisposable
     {
         public bool Initialized = false;
         public bool Busy = false;
@@ -54,7 +54,7 @@ namespace ConsoleApi
                 Dispose();
             }
             process = new Process();
-            string fsRootCmd = useNsEnter ? $"nsenter --target {pid} --mount --pid --uts --ipc --net -- /bash-static": $"chroot /proc/{pid}/root /bash-static";
+            string fsRootCmd = useNsEnter ? $"nsenter --target {pid} --mount --pid --uts --ipc --net -- /bash-static" : $"chroot /proc/{pid}/root /bash-static";
             process.StartInfo = new ProcessStartInfo(pid == null ? "bash" : fsRootCmd.Split(' ', 2)[0])
             {
                 UseShellExecute = false,

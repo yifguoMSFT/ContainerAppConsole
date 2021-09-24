@@ -3,7 +3,7 @@
     <div style="width: 50%;">
         <mat-form-field>
             <mat-label>Choose Container</mat-label>
-            <mat-select [value]="selectedContainerPid" (selectionChange)="selectContainer($event)">
+            <mat-select [value]="selectedContainerId" (selectionChange)="selectContainer($event)">
                 <mat-option *ngFor="let container of containers" [value]="container.Pid">
                     {{container.Name}}
                 </mat-option>
@@ -14,7 +14,7 @@
         <div class="console" style="display: flex; justify-content:space-between;">
             <label for="input-command">></label>
             <input class="console console-input" id="input-command" type="text" [(ngModel)]="command"
-                (keyup.enter)="onCommandEnter()" (keydown.control.c)="terminate()" autocomplete="off">
+                (keyup.enter)="onCommandEnter()" autocomplete="off">
         </div>
     </div>
 </div>
