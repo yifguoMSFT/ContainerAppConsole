@@ -16,7 +16,13 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   command: string = "";
 
   containers: Container[] = [];
-  selectedContainerPid: string;
+  private set _selectedContainerId(id: string) {
+    this.selectedContainerId = id;
+    this._websocketService.resetWebSocket();
+    this._websocketService.setPodAndContainer(this.selectedPodId, id);
+  }
+  selectedContainerId: string = "";
+  selectedPodId: string = "12";
   constructor(private _websocketService: WebsocketService, private _apiService: ApiService) { }
 
   @ViewChild("console") consoleComponent: any;
@@ -38,11 +44,8 @@ export class ConsoleComponent implements OnDestroy, OnInit {
     this._apiService.getContainers().subscribe(containers => {
       this.containers = containers;
 
-      //Only for test
-      this._websocketService.setPod("12");
-
-      this.selectedContainerPid = containers[0].Pid;
-      this._websocketService.setContainer(this.selectedContainerPid);
+      // this.selectedContainerId = containers[0].Pid;
+      this._selectedContainerId = containers[0].Pid;
     })
 
     this.focusToInput();
@@ -51,7 +54,7 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   onCommandEnter() {
     // if (this.command === "") return;
     if (this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
-      this.consoleText = this.defaultConsoleText + this.prefix;
+      this.consoleText = this.defaultConsoleText + this.prefix + "# ";
     } else if (this.command.toLowerCase() === "reset") {
       this._websocketService.sendMessage("reset");
       this.updateConsoleText("reset<br>");
@@ -69,8 +72,8 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   }
 
   private updatePrefix(prefix: string) {
-    this.prefix = prefix;
-    this.consoleText = this.consoleText + prefix + "# ";
+    this.prefix = `${this.selectedContainerId}@${prefix}`;
+    this.consoleText = this.consoleText + this.prefix + "# ";
   }
 
   private processSocketMessage(message: Message) {
@@ -97,10 +100,6 @@ export class ConsoleComponent implements OnDestroy, OnInit {
     this.consoleComponent.nativeElement.scrollTop = scrollHeight + 400;
   }
 
-  //Ctrl + C to stop running command
-  terminate() {
-    // this._websocketService.sendMessage("signal SIGINT");
-  }
 
   private focusToInput() {
     const ele = document.getElementById("input-command");
@@ -110,7 +109,11 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
   selectContainer(e: { value: string }) {
     const containerId = e.value;
-    this._websocketService.setContainer(containerId) ;
+    this._selectedContainerId = containerId;
+
+    if(this.consoleText.length > 0) {
+      this.consoleText = this.consoleText + "<br><br>";
+    }
   }
 
   ngOnDestroy() {

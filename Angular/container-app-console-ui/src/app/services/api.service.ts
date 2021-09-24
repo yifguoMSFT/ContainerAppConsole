@@ -9,6 +9,6 @@ export class ApiService {
     constructor(private _httpClient: HttpClient) { }
 
     public getContainers(): Observable<Container[]> {
-        return this._httpClient.get<Container[]>(`http://console-api.westus2.cloudapp.azure.com/api/containers`);
+        return this._httpClient.get<Container[]>(`${this.endpoint}/containers`);
     }
 }
