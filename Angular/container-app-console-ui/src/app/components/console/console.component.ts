@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
 import { Message, MessageVerb } from '../../models/message';
 import { ApiService } from '../../services/api.service';
-import { Container } from 'src/app/models/element';
+import { Container, Pod } from 'src/app/models/element';
 
 @Component({
   selector: 'app-console',
@@ -16,7 +16,18 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   command: string = "";
 
   containers: Container[] = [];
-  selectedContainerPid: string;
+  private _selectedContainer: Container;
+  set selectedContainer(container: Container) {
+    this._selectedContainer = container;
+    this._websocketService.resetWebSocket();
+    //Need node ip and container uid
+    this._websocketService.setNodeAndContainer(this.selectedPod.ip, container.Uid);
+  }
+
+  disableSelectContainer: boolean = true;
+
+  pods: Pod[] = [];
+  selectedPod: Pod;
   constructor(private _websocketService: WebsocketService, private _apiService: ApiService) { }
 
   @ViewChild("console") consoleComponent: any;
@@ -35,14 +46,8 @@ export class ConsoleComponent implements OnDestroy, OnInit {
       }
     );
 
-    this._apiService.getContainers().subscribe(containers => {
-      this.containers = containers;
-
-      //Only for test
-      this._websocketService.setPod("12");
-
-      this.selectedContainerPid = containers[0].Pid;
-      this._websocketService.setContainer(this.selectedContainerPid);
+    this._apiService.getPods().subscribe(pods => {
+      this.pods = pods;
     })
 
     this.focusToInput();
@@ -51,7 +56,7 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   onCommandEnter() {
     // if (this.command === "") return;
     if (this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
-      this.consoleText = this.defaultConsoleText + this.prefix;
+      this.consoleText = this.defaultConsoleText + this.prefix + "# ";
     } else if (this.command.toLowerCase() === "reset") {
       this._websocketService.sendMessage("reset");
       this.updateConsoleText("reset<br>");
@@ -69,8 +74,8 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   }
 
   private updatePrefix(prefix: string) {
-    this.prefix = prefix;
-    this.consoleText = this.consoleText + prefix + "# ";
+    this.prefix = `${this._selectedContainer.Name}@${prefix}`;
+    this.consoleText = this.consoleText + this.prefix + "# ";
   }
 
   private processSocketMessage(message: Message) {
@@ -97,10 +102,6 @@ export class ConsoleComponent implements OnDestroy, OnInit {
     this.consoleComponent.nativeElement.scrollTop = scrollHeight + 400;
   }
 
-  //Ctrl + C to stop running command
-  terminate() {
-    // this._websocketService.sendMessage("signal SIGINT");
-  }
 
   private focusToInput() {
     const ele = document.getElementById("input-command");
@@ -109,8 +110,18 @@ export class ConsoleComponent implements OnDestroy, OnInit {
 
 
   selectContainer(e: { value: string }) {
-    const containerId = e.value;
-    this._websocketService.setContainer(containerId) ;
+    if (this.consoleText.length > 0) {
+      this.consoleText = this.consoleText + "<br><br>";
+    }
+  }
+
+  selectPod(e: { value: Pod }) {
+    const pod = e.value;
+    this.disableSelectContainer = true;
+    this._apiService.getContainers(pod.uid, pod.ip).subscribe(containers => {
+      this.containers = containers;
+      this.disableSelectContainer = false;
+    });
   }
 
   ngOnDestroy() {
