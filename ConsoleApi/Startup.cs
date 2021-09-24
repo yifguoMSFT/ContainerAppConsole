@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
@@ -35,8 +36,11 @@ namespace ConsoleApi
                     name: "corsPolicy",
                     builder =>
                     {
-                        builder.WithOrigins("http://console-ui.westus2.cloudapp.azure.com");
-                        builder.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost");
+                        builder.SetIsOriginAllowed(origin =>
+                        {
+                            bool allowed = Debugger.IsAttached || new[] { "localhost", "console-ui.westus2.cloudapp.azure.com" }.Contains(new Uri(origin).Host);
+                            return allowed;
+                        });
                     });
             });
         }

@@ -61,7 +61,6 @@ namespace ConsoleApi
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-               
                 using (var webSocket = new WebSocketWrapper(4096, await HttpContext.WebSockets.AcceptWebSocketAsync()))
                 {
                     try
@@ -87,7 +86,7 @@ namespace ConsoleApi
                             {
                                 await webSocket.SendAsync(JsonSerializer.Serialize(new { text = s }));
                             }
-                        }))
+                        }, pid))
                         {
                             await consoleManager.SendAsync(@"cd /");
                             await consoleManager.SendAsync(@"echo end of child process\|$HOSTNAME:$(pwd)");

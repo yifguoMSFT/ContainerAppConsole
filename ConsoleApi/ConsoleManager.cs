@@ -19,11 +19,13 @@ namespace ConsoleApi
         private StringBuilder error;
         private Action<string> outputReciever;
         private int? pid;
+        private bool useNsEnter;
 
-        public ConsoleManager(Action<string> outputReciever, int? pid = null)
+        public ConsoleManager(Action<string> outputReciever, int? pid = null, bool useNsEnter = false)
         {
             this.outputReciever = outputReciever;
             this.pid = pid;
+            this.useNsEnter = useNsEnter;
             Reset();
         }
 
@@ -52,13 +54,14 @@ namespace ConsoleApi
                 Dispose();
             }
             process = new Process();
-            process.StartInfo = new ProcessStartInfo(pid == null ? "bash": $"chroot /proc/{pid}/root /bash-static")
+            string fsRootCmd = useNsEnter ? $"nsenter --target {pid} --mount --pid --uts --ipc --net -- /bash-static": $"chroot /proc/{pid}/root /bash-static";
+            process.StartInfo = new ProcessStartInfo(pid == null ? "bash" : fsRootCmd.Split(' ', 2)[0])
             {
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
-                Arguments = string.Empty
+                Arguments = pid == null ? string.Empty : fsRootCmd.Split(' ', 2)[1]
             };
 
             output = new StringBuilder();
