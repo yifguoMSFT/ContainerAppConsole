@@ -12,18 +12,12 @@ namespace ConsoleApi
     {
         private byte[] buffer;
         public WebSocket WebSocket;
-
-        private bool isConnected = false;
-        public bool IsConnected => isConnected;
+        public bool IsConnected => WebSocket.State == WebSocketState.Open;
         public WebSocketWrapper(WebSocket webSocket, int? bufferSize = null, byte[] buffer = null)
         {
             this.WebSocket = webSocket;
             this.buffer = buffer ?? new byte[bufferSize.Value];
-            if (webSocket.State == WebSocketState.Open)
-            {
-                isConnected = true;
-            }
-            else
+            if(!IsConnected)
             {
                 throw new Exception($"unexpected webSocket state: {webSocket.State}");
             }
@@ -72,7 +66,6 @@ namespace ConsoleApi
 
         public Task CloseAsync()
         {
-            isConnected = false;
             return WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
         }
 

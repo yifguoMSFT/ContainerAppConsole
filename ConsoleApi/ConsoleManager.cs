@@ -43,6 +43,10 @@ namespace ConsoleApi
 
         public void Dispose()
         {
+            if (!process.HasExited)
+            {
+                SendAsync("exit");
+            }
             process.Kill();
             process.Dispose();
         }
