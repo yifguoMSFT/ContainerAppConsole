@@ -1,6 +1,8 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
-import { Message, MessageVerb } from '../../models/Message';
+import { Message, MessageVerb } from '../../models/message';
+import { ApiService } from '../../services/api.service';
+import { Container } from 'src/app/models/element';
 
 @Component({
   selector: 'app-console',
@@ -12,7 +14,10 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   defaultConsoleText: string = "";
   consoleText: string = this.defaultConsoleText;
   command: string = "";
-  constructor(private _websocketService: WebsocketService) { }
+
+  containers: Container[] = [];
+  selectedContainerPid: string;
+  constructor(private _websocketService: WebsocketService, private _apiService: ApiService) { }
 
   @ViewChild("console") consoleComponent: any;
 
@@ -29,13 +34,24 @@ export class ConsoleComponent implements OnDestroy, OnInit {
         this._websocketService.close();
       }
     );
+
+    this._apiService.getContainers().subscribe(containers => {
+      this.containers = containers;
+
+      //Only for test
+      this._websocketService.setPod("12");
+
+      this.selectedContainerPid = containers[0].Pid;
+      this._websocketService.setContainer(this.selectedContainerPid);
+    })
+
     this.focusToInput();
   }
 
   onCommandEnter() {
     // if (this.command === "") return;
     if (this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
-      this.consoleText = this.defaultConsoleText + "<br>" + this.prefix;
+      this.consoleText = this.defaultConsoleText + this.prefix;
     } else if (this.command.toLowerCase() === "reset") {
       this._websocketService.sendMessage("reset");
       this.updateConsoleText("reset<br>");
@@ -89,6 +105,12 @@ export class ConsoleComponent implements OnDestroy, OnInit {
   private focusToInput() {
     const ele = document.getElementById("input-command");
     if (ele) ele.focus();
+  }
+
+
+  selectContainer(e: { value: string }) {
+    const containerId = e.value;
+    this._websocketService.setContainer(containerId) ;
   }
 
   ngOnDestroy() {

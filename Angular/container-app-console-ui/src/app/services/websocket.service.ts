@@ -27,6 +27,14 @@ export class WebsocketService {
     public setContainer(containerId: string) {
         const command = "set-container " + containerId;
         this.sendMessage(command);
+        console.log("set-container", containerId);
+    }
+
+
+    public setPod(podId: string) {
+        const command = "set-pod " + podId;
+        this.sendMessage(command);
+        console.log("set-pod", podId);
     }
 }
 

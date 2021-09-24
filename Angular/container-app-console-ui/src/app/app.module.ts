@@ -8,6 +8,7 @@ import { WebsocketService } from './services/websocket.service';
 import { UnHandleExceptionHandler } from './services/unhandle-exception-handler';
 import { RouterModule } from '@angular/router';
 import { ConsoleComponent } from './components/console/console.component';
+import { MatSelectModule } from '@angular/material/select'
 
 export const MainModuleRoutes = RouterModule.forRoot([
   {
@@ -27,7 +28,7 @@ export const MainModuleRoutes = RouterModule.forRoot([
     FormsModule,
     HttpClientModule,
     MainModuleRoutes,
-    // RouterModule
+    MatSelectModule
   ],
   providers: [
     {
