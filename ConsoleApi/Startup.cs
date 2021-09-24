@@ -29,6 +29,16 @@ namespace ConsoleApi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddCors(options =>
+            {
+                options.AddPolicy(
+                    name: "corsPolicy",
+                    builder =>
+                    {
+                        builder.WithOrigins("http://console-ui.westus2.cloudapp.azure.com");
+                        builder.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost");
+                    });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -49,6 +59,7 @@ namespace ConsoleApi
                 KeepAliveInterval = TimeSpan.FromSeconds(120)
             };
             app.UseWebSockets(webSocketOptions);
+            app.UseCors("corsPolicy");
 
             app.UseEndpoints(endpoints =>
             {

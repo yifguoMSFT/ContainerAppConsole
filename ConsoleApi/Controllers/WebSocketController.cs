@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
@@ -60,59 +61,72 @@ namespace ConsoleApi
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                bool busy = false;
+               
                 using (var webSocket = new WebSocketWrapper(4096, await HttpContext.WebSockets.AcceptWebSocketAsync()))
-                using (var consoleManager = new ConsoleManager(async s => 
                 {
-                    if (s.StartsWith("end of child process"))
+                    try
                     {
-                        busy = false;
-                        var splitted = s.Split('|');
-                        await webSocket.SendAsync(JsonSerializer.Serialize(new { prefix = splitted[1] }));
-                    }
-                    else
-                    {
-                        await webSocket.SendAsync(JsonSerializer.Serialize(new { text = s }));
-                    }
-                    
-                }))
-                {
-
-                    string input = null;
-                    if (!webSocket.IsConnected)
-                    {
-                        throw new Exception("webSocket connection failed");
-                    }
-                    await consoleManager.SendAsync(@"cd /");
-                    await consoleManager.SendAsync(@"echo end of child process\|$(hostname):$(pwd)");
-                    while (webSocket.IsConnected)
-                    {
-                        input = await webSocket.RecvAsync();
-                        if(input.StartsWith('"') && input.EndsWith('"'))
+                        if (!webSocket.IsConnected)
                         {
-                            input = input.Substring(1, input.Length - 2);
+                            throw new Exception("webSocket connection failed");
                         }
-                        var splitted = input.Split(' ', 2);
-                        string cmd = splitted[0];
+                        
+                        (string pod, int pid) = await TryHandShakeAsync(webSocket);
+                        await TryPrepareStaticBashAsync(pid);
 
-                        if (cmd == "run" && splitted.Length == 2)
+                        ConsoleManager consoleManager = null;
+                        using (consoleManager = new ConsoleManager(async s =>
                         {
-                            await consoleManager.SendAsync(splitted[1]);
-                            if (!busy)
+                            if (s.StartsWith("end of child process"))
                             {
-                                busy = true;
-                                await consoleManager.SendAsync(@"echo end of child process\|$(hostname):$(pwd)");
+                                consoleManager.Busy = false;
+                                var splitted = s.Split('|');
+                                await webSocket.SendAsync(JsonSerializer.Serialize(new { prefix = splitted[1] }));
+                            }
+                            else
+                            {
+                                await webSocket.SendAsync(JsonSerializer.Serialize(new { text = s }));
+                            }
+                        }))
+                        {
+                            await consoleManager.SendAsync(@"cd /");
+                            await consoleManager.SendAsync(@"echo end of child process\|$HOSTNAME:$(pwd)");
+                            string input = null;
+                            while (webSocket.IsConnected && consoleManager.IsRunning)
+                            {
+                                input = await webSocket.RecvAsync();
+                                if (input.StartsWith('"') && input.EndsWith('"'))
+                                {
+                                    input = input.Substring(1, input.Length - 2);
+                                }
+                                var splitted = input.Split(' ', 2);
+                                string cmd = splitted[0];
+
+                                if (cmd == "run" && splitted.Length == 2)
+                                {
+                                    await consoleManager.SendAsync(splitted[1]);
+                                    if (!consoleManager.Busy)
+                                    {
+                                        consoleManager.Busy = true;
+                                        await consoleManager.SendAsync(@"echo end of child process\|$HOSTNAME:$(pwd)");
+                                    }
+                                }
+                                else if (cmd == "reset")
+                                {
+                                    await ResetAsync(consoleManager, pid);
+                                }
+                                else
+                                {
+                                    throw new Exception($"invalid input: {input}");
+                                }
                             }
                         }
-                        else if (cmd == "reset")
+                    }
+                    catch (Exception e)
+                    {
+                        if (webSocket.IsConnected)
                         {
-                            consoleManager.Reset();
-                            await consoleManager.SendAsync(@"cd /");
-                            await consoleManager.SendAsync(@"echo end of child process\|$(hostname):$(pwd)");
-                        }
-                        else
-                        {
-                            await webSocket.SendAsync(JsonSerializer.Serialize(new { error = $"invalid input: {input}" }));
+                            await webSocket.SendAsync(JsonSerializer.Serialize(new { error = e.Message }));
                         }
                     }
                 }
@@ -120,6 +134,65 @@ namespace ConsoleApi
             else
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            }
+        }
+
+        private async Task ResetAsync(ConsoleManager consoleManager, int pid)
+        {
+            consoleManager.Reset();
+            await consoleManager.SendAsync(@"cd /");
+            await consoleManager.SendAsync(@"echo end of child process\|$HOSTNAME:$(pwd)");
+        }
+
+       
+
+        private async Task<(string pod, int pid)> TryHandShakeAsync(WebSocketWrapper webSocket)
+        {
+            try
+            {
+                var input = await webSocket.RecvAsync();
+                if (!input.StartsWith("set-pod"))
+                {
+                    throw new Exception("the first operation must be set-pod [pod name]");
+                }
+                string pod = input.Split(' ', 2)[1];
+
+                input = await webSocket.RecvAsync();
+                if (!input.StartsWith("set-container"))
+                {
+                    throw new Exception("the second operation must be set-container [container pid]");
+                }
+                string pid = input.Split(' ', 2)[1];
+                return (pod, int.Parse(pid));
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Handshake failed with exception: {e.Message}");
+            }
+        }
+
+        private async Task TryPrepareStaticBashAsync(int pid)
+        {
+            ConsoleManager consoleManager = null;
+            using (consoleManager = new ConsoleManager(s => { }))
+            {
+                if (!Directory.Exists($"/proc/{pid}"))
+                {
+                    throw new Exception($"pid {pid} doesn't exist on {Environment.MachineName}");
+                }
+
+                try
+                {
+                    System.IO.File.Copy("bash-static", $"/proc/{pid}/root/bash-static", false);
+                }
+                catch (Exception e)
+                {
+                    if (!e.Message.Contains("exists"))
+                    {
+                        throw;
+                    }
+                }
+                await consoleManager.SendAsync($"chmod 544 /proc/{pid}/root/bash-static");
             }
         }
     }

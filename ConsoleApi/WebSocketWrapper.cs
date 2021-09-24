@@ -31,7 +31,13 @@ namespace ConsoleApi
 
         public void Dispose()
         {
-            webSocket.Dispose();
+            try
+            {
+                webSocket.Dispose();
+            }
+            catch (Exception e)
+            { 
+            }
         }
 
         public Task SendAsync(string msg)

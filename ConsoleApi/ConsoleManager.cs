@@ -9,33 +9,40 @@ namespace ConsoleApi
 {
     public class ConsoleManager:IDisposable
     {
+        public bool Initialized = false;
+        public bool Busy = false;
+        public bool IsRunning => !process.HasExited;
+
         private Process process;
 
         private StringBuilder output;
         private StringBuilder error;
         private Action<string> outputReciever;
+        private int? pid;
 
-        public ConsoleManager(Action<string> outputReciever)
+        public ConsoleManager(Action<string> outputReciever, int? pid = null)
         {
             this.outputReciever = outputReciever;
+            this.pid = pid;
             Reset();
         }
 
-        public Task SendAsync(string msg)
+        public async Task SendAsync(string msg)
         {
-            return process.StandardInput.WriteLineAsync(msg);
+            if (!process.HasExited)
+            {
+                await process.StandardInput.WriteLineAsync(msg);
+            }
+            else
+            {
+                outputReciever.Invoke("terminated!");
+            }
         }
 
         public void Dispose()
         {
             process.Kill();
             process.Dispose();
-        }
-
-        public enum State
-        {
-            Ready,
-            Busy
         }
 
         public void Reset()
@@ -45,7 +52,7 @@ namespace ConsoleApi
                 Dispose();
             }
             process = new Process();
-            process.StartInfo = new ProcessStartInfo("bash")
+            process.StartInfo = new ProcessStartInfo(pid == null ? "bash": $"chroot /proc/{pid}/root /bash-static")
             {
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
