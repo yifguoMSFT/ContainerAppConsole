@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: pod-analyzer-daemon
-  namespace: default
+  namespace: pod-analyzer
 spec:
   selector:
     matchLabels:

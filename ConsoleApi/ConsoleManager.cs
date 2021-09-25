@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -58,7 +59,12 @@ namespace ConsoleApi
                 Dispose();
             }
             process = new Process();
-            string fsRootCmd = useNsEnter ? $"nsenter --target {pid} --mount --pid --uts --ipc --net -- /bash-static" : $"chroot /proc/{pid}/root /bash-static";
+            string environ = "";
+            if (pid != null)
+            {
+                environ = File.ReadAllText($"/proc/{pid}/environ").Replace('\0',' ');
+            }
+            string fsRootCmd = useNsEnter ? $"env -i - {environ} nsenter --target {pid} --mount --pid --uts --ipc --net -- /bash-static" : $"env -i - {environ} chroot /proc/{pid}/root /bash-static";
             process.StartInfo = new ProcessStartInfo(pid == null ? "bash" : fsRootCmd.Split(' ', 2)[0])
             {
                 UseShellExecute = false,

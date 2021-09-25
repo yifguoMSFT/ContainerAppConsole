@@ -72,7 +72,7 @@ namespace ConsoleApi
                 {
                     string result = await ProcessManager.RunAsync("nsenter", "--target 1 --pid --ipc --mount --uts --net -- crictl pods -o json");
                     var json = JsonConvert.DeserializeObject<JToken>(result);
-                    var pods = json["items"].Select(t => new { name = t["metadata"]["name"], id = t["id"] });
+                    var pods = json["items"].Where(t => t["metadata"]["namespace"].ToString() == "default").Select(t => new { name = t["metadata"]["name"], id = t["id"] });
                     return Ok(JsonConvert.SerializeObject(pods));
                 }
                 else

@@ -4,6 +4,7 @@ metadata:
   annotations:
     service.beta.kubernetes.io/azure-dns-label-name: console-api-v2
   name: console-api-v2-svc
+  namespace: pod-analyzer
 spec:
   type: LoadBalancer
   ports:
