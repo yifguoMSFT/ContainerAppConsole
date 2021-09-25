@@ -62,7 +62,7 @@ namespace ConsoleApi
             string environ = "";
             if (pid != null)
             {
-                environ = File.ReadAllText($"/proc/{pid}/environ").Replace('\0',' ');
+                environ = string.Join(" ", File.ReadAllText($"/proc/{pid}/environ").Split('\0').Where(s => !string.IsNullOrEmpty(s) && s.Contains("=")));
             }
             string fsRootCmd = useNsEnter ? $"env -i - {environ} nsenter --target {pid} --mount --pid --uts --ipc --net -- /bash-static" : $"env -i - {environ} chroot /proc/{pid}/root /bash-static";
             process.StartInfo = new ProcessStartInfo(pid == null ? "bash" : fsRootCmd.Split(' ', 2)[0])

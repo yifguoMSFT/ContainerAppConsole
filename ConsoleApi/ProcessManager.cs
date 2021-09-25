@@ -23,6 +23,11 @@ namespace ConsoleApi
             process.Start();
             string output = await process.StandardOutput.ReadToEndAsync();
             string error = await process.StandardError.ReadToEndAsync();
+            process.WaitForExit(500);
+            if (!process.HasExited)
+            {
+                process.Kill();
+            }
             if (!string.IsNullOrEmpty(error))
             {
                 throw new Exception($"error code {process.ExitCode}:{error}");
