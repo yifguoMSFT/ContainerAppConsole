@@ -15,7 +15,7 @@ namespace SimpleServer.Controllers
         [HttpGet]
         public IActionResult Ok()
         {
-            return Ok("ok");
+            return Ok(Environment.MachineName);
         }
     }
 }
