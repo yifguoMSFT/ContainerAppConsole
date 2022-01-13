@@ -4,7 +4,7 @@
 
 export const environment = {
   production: false,
-  endpoint: "console-api-v2.westus2.cloudapp.azure.com",
+  endpoint: "console-api.eastus.cloudapp.azure.com",
 };
 
 /*

@@ -5,6 +5,4 @@ export interface Container {
 
 export interface Pod {
     name: string;
-    id: string;
-    ip: string;
 }

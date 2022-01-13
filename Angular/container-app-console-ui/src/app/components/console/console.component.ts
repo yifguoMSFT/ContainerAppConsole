@@ -1,56 +1,106 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
 import { Message, MessageVerb } from '../../models/message';
 import { ApiService } from '../../services/api.service';
 import { Container, Pod } from 'src/app/models/element';
+import { NgTerminal } from 'ng-terminal';
+import { HttpClient } from '@angular/common/http';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-console',
   templateUrl: './console.component.html',
-  styleUrls: ['./console.component.scss']
+  styleUrls: ['./console.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
-export class ConsoleComponent implements OnDestroy, OnInit {
+export class ConsoleComponent implements OnDestroy, OnInit, AfterViewInit {
+  @ViewChild('term', { static: true }) term: NgTerminal;
   prefix: string = "";
   defaultConsoleText: string = "";
   consoleText: string = this.defaultConsoleText;
   command: string = "";
+  webSocket: WebSocket;
 
-  containers: Container[] = [];
-  private _selectedContainer: Container;
-  set selectedContainer(container: Container) {
-    this._selectedContainer = container;
-    this._websocketService.resetWebSocket();
-    //Need node ip and container id
-    this._websocketService.setNodeAndContainer(this.selectedPod.ip, container.id);
+  pods: string[] = null;
+  private _selectedPod: string;
+  set selectedPod(pod: string) {
+    this._selectedPod = pod;
+
+    this._httpClient
+      .get(`http://${environment.endpoint}/api/containerApps/${this.selectedCapp}/consoleWebsocketUrl?podName=${pod}`, {responseType: 'text'})
+      .toPromise()
+      .then((url: string) => {
+        if (this.webSocket != null) {
+          this.webSocket.close();
+          this.term.underlying.reset();
+        }
+        this.webSocket = new WebSocket(url);
+        this.webSocket.onmessage = async (ev: MessageEvent) => {
+          if (ev.data instanceof Blob) {
+            this.processMessageBlob(ev.data);
+          } else {
+            this.updateConsoleText(ev.data + "\r\n");
+          }
+        };
+        this.webSocket.onerror = (ev: MessageEvent) => {
+          console.log("ws error: " + ev.data);
+        };
+      });
   }
 
-  disableSelectContainer: boolean = true;
+  disableSelectPod: boolean = true;
 
-  pods: Pod[] = [];
-  selectedPod: Pod;
-  constructor(private _websocketService: WebsocketService, private _apiService: ApiService) { }
+  capps: string[] = [];
+  selectedCapp: string;
+  constructor(private _websocketService: WebsocketService, private _apiService: ApiService, private _httpClient: HttpClient) { }
 
   @ViewChild("console") consoleComponent: any;
 
   ngOnInit() {
-    this._websocketService.webSocketSubject.subscribe(
-      ((msg: Message) => {
-        this.processSocketMessage(msg);
-      }),
-      (err => {
-        console.error(err);
-      }),
-      () => {
-        console.log("complete");
-        this._websocketService.close();
-      }
-    );
-
-    this._apiService.getPods().subscribe(pods => {
-      this.pods = pods;
+    this._apiService.getCapps().subscribe(capps => {
+      this.capps = capps;
     })
+  }
 
-    this.focusToInput();
+  ngAfterViewInit() {
+    this.term.underlying.options.cursorBlink = true;
+    this.term.underlying.reset();
+    this.term.keyEventInput.subscribe(e => {
+      const ev = e.domEvent;
+      const printable = !ev.altKey && !ev.ctrlKey && !ev.metaKey;
+
+      this.sendStdin(e.key);
+      /*if (e.key.charCodeAt(0) === 13) {
+        //this.term.write('\r\n$ ');
+        this.sendStdin("\r\n");
+      } else if (e.key === '\x7F') {
+        if (this.term.underlying.buffer.active.cursorX > 2) {
+          this.term.write('\b \b');
+        }
+      } else if (e.key == '\x03') {
+        this.term.write("^C");
+      }
+      else if (printable) {
+        this.term.write(e.key);
+      }//*/
+    })
+  }
+
+  async processMessageBlob(data: Blob) {
+    var arrayBuffer = await data.arrayBuffer();
+    var arr = new Uint8Array(arrayBuffer);
+    var decoder = new TextDecoder();
+    switch (arr[0]) {
+      case 1: //stdout
+      case 2: //stderr
+      case 3: //k8s api server error
+        this.updateConsoleText(decoder.decode(arr.slice(1)));
+        break;
+      case 4: //terminal resize
+        break;
+      default:
+        throw new Error(`unknown channel ${arr[0]}`);
+    }
   }
 
   onCommandEnter() {
@@ -58,72 +108,44 @@ export class ConsoleComponent implements OnDestroy, OnInit {
     if (this.command.toLowerCase() === "cls" || this.command.toLowerCase() === "clear") {
       this.consoleText = this.defaultConsoleText + this.prefix + "# ";
     } else if (this.command.toLowerCase() === "reset") {
-      this._websocketService.sendMessage("reset");
-      this.updateConsoleText("reset<br>");
+      //this._websocketService.sendMessage("reset");
+      //this.updateConsoleText("reset<br>");
     }
     else {
-      this.updateConsoleText(this.command);
-      const message = "run " + this.command;
-      this._websocketService.sendMessage(message);
+      //this.updateConsoleText(this.command);
+      //const message = "run " + this.command;
+      //this._websocketService.sendMessage(message);
+      this.sendStdin(this.command);
     }
     this.command = "";
   }
 
-  private updateConsoleText(text: string) {
-    this.consoleText = this.consoleText + `${text}` + "<br>";
-    this.scrollToBottom();
-  }
-
-  private updatePrefix(prefix: string) {
-    this.prefix = `${this._selectedContainer.name}@${prefix}`;
-    this.consoleText = this.consoleText + this.prefix + "# ";
-    this.scrollToBottom();
-  }
-
-  private processSocketMessage(message: Message) {
-    const key: string = Object.keys(message)[0];
-    switch (key) {
-      case MessageVerb.error:
-        console.log("------------Error----------------");
-        console.log(message.error);
-        break;
-      case MessageVerb.text:
-        const text = message.text;
-        this.updateConsoleText(text);
-        break;
-      case MessageVerb.prefix:
-        const prefix = message.prefix;
-        this.updatePrefix(prefix);
-        break;
+  sendStdin(text: string) {
+    if (this.webSocket && this.webSocket.readyState === this.webSocket.OPEN) {
+      var encoder = new TextEncoder();
+      var arr = encoder.encode(text);
+      this.webSocket.send(new Blob([new Uint8Array([0]), arr]));
     }
   }
 
-  private scrollToBottom() {
-    setTimeout(() => {
-      const scrollHeight = this.consoleComponent.nativeElement.scrollHeight;
-      this.consoleComponent.nativeElement.scrollTop = scrollHeight;
-    }, 10);
+  private updateConsoleText(text: string) {
+    this.term.write(text);
   }
 
 
-  private focusToInput() {
-    const ele = document.getElementById("input-command");
-    if (ele) ele.focus();
-  }
 
-
-  selectContainer(e: { value: string }) {
+  selectPod(e: { value: string }) {
     if (this.consoleText.length > 0) {
       this.consoleText = this.consoleText + "<br><br>";
     }
   }
 
-  selectPod(e: { value: Pod }) {
-    const pod = e.value;
-    this.disableSelectContainer = true;
-    this._apiService.getContainers(pod.id, pod.ip).subscribe(containers => {
-      this.containers = containers;
-      this.disableSelectContainer = false;
+  selectCapp(e: { value: string }) {
+    const capp = e.value;
+    this.disableSelectPod = true;
+    this._apiService.getPods(capp).subscribe(pods => {
+      this.pods = pods.length > 0 ? pods : null;
+      this.disableSelectPod = false;
     });
   }
 

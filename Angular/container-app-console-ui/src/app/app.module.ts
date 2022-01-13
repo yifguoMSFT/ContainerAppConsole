@@ -8,7 +8,8 @@ import { WebsocketService } from './services/websocket.service';
 import { UnHandleExceptionHandler } from './services/unhandle-exception-handler';
 import { RouterModule } from '@angular/router';
 import { ConsoleComponent } from './components/console/console.component';
-import { MatSelectModule } from '@angular/material/select'
+import { MatSelectModule } from '@angular/material/select';
+import { NgTerminalModule } from 'ng-terminal';
 
 export const MainModuleRoutes = RouterModule.forRoot([
   {
@@ -23,6 +24,7 @@ export const MainModuleRoutes = RouterModule.forRoot([
     ConsoleComponent
   ],
   imports: [
+    NgTerminalModule,
     BrowserModule,
     BrowserAnimationsModule,
     FormsModule,

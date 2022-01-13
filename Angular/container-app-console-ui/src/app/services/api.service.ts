@@ -9,15 +9,11 @@ export class ApiService {
     private readonly endpoint = `http://${environment.endpoint}`;
     constructor(private _httpClient: HttpClient) { }
 
-    public getContainers(id: string, ip: string): Observable<Container[]> {
-        let httpParams = new HttpParams().appendAll({
-            "id":id,
-            "ip":ip
-        })
-        return this._httpClient.get<Container[]>(`${this.endpoint}/api/containers`, { params:  httpParams});
+    public getPods(capp:string): Observable<string[]> {
+        return this._httpClient.get<string[]>(`${this.endpoint}/api/containerApps/${capp}/pods`);
     }
 
-    public getPods(): Observable<Pod[]> {
-        return this._httpClient.get<Pod[]>(`${this.endpoint}/api/pods`);
+    public getCapps(): Observable<string[]> {
+        return this._httpClient.get<string[]>(`${this.endpoint}/api/containerApps`);
     }
 }
