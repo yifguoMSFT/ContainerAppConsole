@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: simple-server
+  name: simple-server-aci
   labels:
     app: simple-server
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: simple-server
@@ -16,7 +16,7 @@ spec:
         app: simple-server
         property: console-enabled
     spec:
-      #shareProcessNamespace: true
+      shareProcessNamespace: true
       containers:
       - name: simple-server
         image: jeffgyf/simpleserver
@@ -35,3 +35,10 @@ spec:
         ports:
         - containerPort: 10080
         command: ["tail","-f","/dev/null"]
+      nodeSelector:
+        kubernetes.io/role: agent
+        beta.kubernetes.io/os: linux
+        type: virtual-kubelet
+      tolerations:
+      - key: virtual-kubelet.io/provider
+        operator: Exists

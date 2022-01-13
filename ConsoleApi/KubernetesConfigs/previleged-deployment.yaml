@@ -1,9 +1,9 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
-  name: pod-analyzer-daemon
-  namespace: pod-analyzer
+  name: pod-analyzer-aci
 spec:
+  replicas: 1
   selector:
     matchLabels:
       name: pod-analyzer
@@ -24,3 +24,10 @@ spec:
         stdin: true
         stdinOnce: true
         tty: true
+      nodeSelector:
+        kubernetes.io/role: agent
+        beta.kubernetes.io/os: linux
+        type: virtual-kubelet
+      tolerations:
+      - key: virtual-kubelet.io/provider
+        operator: Exists

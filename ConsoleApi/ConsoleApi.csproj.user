@@ -1,7 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ActiveDebugProfile>Docker</ActiveDebugProfile>
+    <ActiveDebugProfile>Bridge to Kubernetes</ActiveDebugProfile>
     <NameOfLastUsedPublishProfile>registry.hub.docker.com</NameOfLastUsedPublishProfile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <ItemGroup>
+    <DevSpacesDebugProfileUserSetting Include="Bridge to Kubernetes">
+      <ClusterSource>KUBECONFIG</ClusterSource>
+      <ClusterName>jeff-aks-aci-enabled</ClusterName>
+      <Context>jeff-aks-aci-enabled</Context>
+      <Namespace>default</Namespace>
+      <ServiceName>console-api-svc</ServiceName>
+      <RoutingHeader>
+      </RoutingHeader>
+      <LaunchUrl>http://20.102.25.59</LaunchUrl>
+      <LocalLaunchProfile>ConsoleApi</LocalLaunchProfile>
+    </DevSpacesDebugProfileUserSetting>
+  </ItemGroup>
 </Project>

@@ -5,3 +5,7 @@
 /ConsoleApi/.vs
 /ConsoleApi/obj
 /ConsoleApi/bin
+/Angular/node_modules
+/ConsoleApiWin/obj
+/ConsoleApiWin/wwwroot
+/ConsoleApiWin

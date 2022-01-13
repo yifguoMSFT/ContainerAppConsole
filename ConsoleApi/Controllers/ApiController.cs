@@ -9,6 +9,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Net.Http;
+using k8s;
+using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Net.Security;
 
 namespace ConsoleApi
 {
@@ -63,39 +68,23 @@ namespace ConsoleApi
 
         private HttpClient httpClient = new HttpClient();
 
-        [Route("pods")]
-        public async Task<IActionResult> GetPods(bool local = false)
+        [Route("containerApps/{cappName}/consoleWebsocketUrl")]
+        public async Task<IActionResult> GetConsoleWebsocketUrl(string cappName, string podName)
         {
             try
             {
-                if (local)
+                var config = KubernetesClientConfiguration.InClusterConfig();
+                var client = new Kubernetes(config);
+                var podList = client.ListNamespacedPod("k8se-apps");
+                var pod = podList.Items.Where(p => p.Metadata.Labels["containerapps.io/app-name"] == cappName && p.Metadata.Name == podName).FirstOrDefault();
+                if (pod == null)
                 {
-                    string result = await ProcessManager.RunAsync("nsenter", "--target 1 --pid --ipc --mount --uts --net -- crictl pods -o json");
-                    var json = JsonConvert.DeserializeObject<JToken>(result);
-                    var pods = json["items"].Where(t => t["metadata"]["namespace"].ToString() == "default" && t["state"].ToString() != "SANDBOX_NOTREADY").Select(t => new { name = t["metadata"]["name"], id = t["id"] });
-                    return Ok(JsonConvert.SerializeObject(pods));
+                    return StatusCode(404, $"Pod {podName} not found");
                 }
-                else
-                {
-                    var hostEntry = await Dns.GetHostEntryAsync("console-api-v2-headless");
-                    var ips = hostEntry.AddressList.Select(addr => addr.ToString()).ToList();
 
-                    var tasks = ips.Select(async ip =>
-                    {
-                        var resp = await httpClient.GetAsync($"http://{ip}:10080/api/pods?local=true");
-                        var conent = await resp.Content.ReadAsStringAsync();
-                        var json = JsonConvert.DeserializeObject<JToken>(conent);
-                        foreach (var item in json)
-                        {
-                            item["ip"] = ip;
-                        }
-                        return json;
-                    }).ToList();
-                    await Task.WhenAll(tasks);
-                    var result = tasks.SelectMany(t => t.Result).OrderBy(t => t["name"]);
-                    return Ok(JsonConvert.SerializeObject(result));
-                }
-                
+                string url = $"ws://console-api.eastus.cloudapp.azure.com/console?podName={pod.Metadata.Name}";
+                return Ok(url);
+
             }
             catch (Exception e)
             {
@@ -103,33 +92,107 @@ namespace ConsoleApi
             }
         }
 
-        private class ContainerInfo
-        {
-            public string Name;
-            public int Pid;
-        }
 
-        private async Task<ContainerInfo> GetContainerNameAsync(DirectoryInfo proc)
+        [Route("containerApps/{cappName}/pods")]
+        public async Task<IActionResult> GetPods(string cappName)
         {
             try
             {
-                using (var environ = proc.GetFiles("environ")[0].OpenText())
+                var config = KubernetesClientConfiguration.InClusterConfig();
+                var client = new Kubernetes(config);
+                var podList = client.ListNamespacedPod("k8se-apps");
+                var pods = podList.Items.Where(p => p.Metadata.Labels["containerapps.io/app-name"] == cappName).ToList();
+                var podNames = pods.Select(p => p.Metadata.Name).ToList();
+                return Ok(JsonConvert.SerializeObject(podNames));
+
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, JsonConvert.SerializeObject(e));
+            }
+        }
+
+
+        [Route("containerApps")]
+        public async Task<IActionResult> GetContainerApps() 
+        {
+            try
+            {
+                var config = KubernetesClientConfiguration.InClusterConfig();
+                var client = new Kubernetes(config);
+                var apps = ((JObject)client.ListNamespacedCustomObject("k8se.microsoft.com", "v1alpha1", "k8se-apps", "containerapps")).ToObject<AppList>();
+                var appNames = apps.Items.Select(a => a.Metadata.Name).ToList();
+                return Ok(JsonConvert.SerializeObject(appNames));
+            }
+            catch (Exception e)
+            {
+
+                return Ok(JsonConvert.SerializeObject(e));
+            }
+        }
+
+        [Route("test")]
+        public async Task<IActionResult> Test(string args = null)
+        {
+            k8s.Models.V1Pod pod = null;
+            var list = new List<string>();
+            try
+            {
+                var config = KubernetesClientConfiguration.InClusterConfig();
+                return Ok(JsonConvert.SerializeObject(config));
+                //config.AccessToken = System.IO.File.ReadAllText("/var/run/secrets/kubernetes.io/serviceaccount/token");
+                var client = new Kubernetes(config);
+                //var apps = ((JObject)client.ListClusterCustomObject("k8se.microsoft.com", "v1alpha1", "apps")).ToObject<AppList>();
+                var pods = client.ListNamespacedPod("default");
+                pod = pods.Items.Where(p => p.Metadata.Name.StartsWith("jeff-aci-helloworld")).First();
+
+                /*using (var wsClient = new ClientWebSocket())
                 {
-                    var envs = await environ.ReadToEndAsync();
-                    if (!string.IsNullOrEmpty(envs))
+                    /*var wsOptions = wsClient.Options;
+                    wsOptions.SetRequestHeader("Authorization", $"Bearer { System.IO.File.ReadAllText("/var/run/secrets/kubernetes.io/serviceaccount/token")}");
+                    wsOptions.ClientCertificates.Add(new X509Certificate2("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"));
+                    wsOptions.AddSubProtocol("v4.channel.k8s.io");
+                    wsOptions.RemoteCertificateValidationCallback += (object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) => true;
+                    await wsClient.ConnectAsync(new Uri($"wss://kubernetes.default.svc/api/v1/namespaces/default/pods/{pod.Metadata.Name}/exec?command=ls&stdin=true&stdout=true&tty=false"), CancellationToken.None);
+                    //*/
+                //using (var webSocket = await client.WebSocketNamespacedPodExecAsync(pod.Metadata.Name, "default", new[] { "ls"}))
+                using (var wsClient = await client.WebSocketNamespacedPodExecAsync(pod.Metadata.Name, "default", new[] { "ls" }, pod.Spec.Containers[0].Name, tty: false, webSocketSubProtol: "v4.channel.k8s.io"))
+                {//*/
+                    /*var wrapper = new WebSocketWrapper(wsClient, 4096);
+                    var start = DateTime.Now;
+
+                    string str = null;
+                    var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(t => "timeout");
+                    try
                     {
-                        var envDict = envs.Split('\0').Where(s => !string.IsNullOrEmpty(s)).Select(env => env.Split('=')).ToDictionary(splitted => splitted[0], splitted => splitted[1]);
-                        if (envDict.ContainsKey("CONTAINER_NAME"))
+                        while ((str = await Task.WhenAny(wrapper.RecvAsync(), timeoutTask).Unwrap()) != null)
                         {
-                            return new ContainerInfo { Pid = int.Parse(proc.Name), Name = envDict["CONTAINER_NAME"] };
+                            list.Add(str);
+                            if (timeoutTask.IsCompleted)
+                            {
+                                break;
+                            }
                         }
                     }
+                    catch (Exception e)
+                    { 
+                    }//*/
+                    var demux = new StreamDemuxer(wsClient);
+                    demux.Start();
+
+                    var buff = new byte[4096];
+                    var stream = demux.GetStream(1, 1);
+                    var streamReader = new StreamReader(stream);
+                    string str = streamReader.ReadToEnd();
+                    return Ok(str);
                 }
             }
             catch (Exception e)
-            { 
+            {
+
+                return Ok(JsonConvert.SerializeObject(new { e, pod, list }));
             }
-            return null;
+
         }
     }
 }

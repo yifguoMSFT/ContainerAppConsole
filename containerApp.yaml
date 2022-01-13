@@ -1,0 +1,55 @@
+apiVersion: v1
+items:
+- apiVersion: k8se.microsoft.com/v1alpha1
+  kind: ContainerApp
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"k8se.microsoft.com/v1alpha1","kind":"ContainerApp","metadata":{"annotations":{},"name":"containerapp-sample","namespace":"k8se-apps"},"spec":{"configuration":{"ingress":{"external":true,"targetPort":80},"secrets":[{"name":"mysecret","value":"123"}]},"template":{"containers":[{"env":[{"name":"HTTP_PORT","value":"80"},{"name":"SECRET_VAL","secretRef":"mysecret"}],"image":"nginx","name":"nginx","ports":[{"name":"nginxtcp","port":80,"protocol":"TCP"}],"resources":{"cpu":"0.5","memory":"250Mi"}}]}}}
+    creationTimestamp: "2021-12-02T23:48:14Z"
+    generation: 4
+    name: containerapp-sample
+    namespace: k8se-apps
+    resourceVersion: "7326444"
+    uid: bdbd6ea0-bc5e-48ac-a8b8-569338ddd8fe
+  spec:
+    configuration:
+      activeRevisionsMode: multiple
+      ingress:
+        external: true
+        targetPort: 80
+        traffic:
+        - latestRevision: true
+          percent: 100
+      secrets:
+      - name: mysecret
+        value: pmWkWSBCL51Bfkhn79xPuKBKHz__H6B-mY6G9_eieuM=
+    template:
+      containers:
+      - env:
+        - name: HTTP_PORT
+          secretRef: ""
+          value: "80"
+        - name: SECRET_VAL
+          secretRef: mysecret
+          value: ""
+        image: nginx
+        name: nginx
+        ports:
+        - name: nginxtcp
+          port: 80
+          protocol: TCP
+        probes: {}
+        resources:
+          cpu: "0.5"
+          memory: 250Mi
+      revisionSuffix: ""
+  status:
+    containerAppProvisioningState: Running
+    lastConfigurationState: '{"ingress":{"external":true,"targetPort":80,"traffic":[{"percent":100,"latestRevision":true}]},"secrets":[{"name":"mysecret","value":"pmWkWSBCL51Bfkhn79xPuKBKHz__H6B-mY6G9_eieuM="}],"activeRevisionsMode":"multiple"}'
+    latestCreatedRevisionName: containerapp-sample--88xm2t2
+    latestReadyRevisionName: containerapp-sample--88xm2t2
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""

@@ -1,9 +1,9 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
-  name: pod-analyzer-daemon
-  namespace: pod-analyzer
+  name: pod-analyzer
 spec:
+  replicas: 1
   selector:
     matchLabels:
       name: pod-analyzer
@@ -16,11 +16,5 @@ spec:
       containers:
       - name: pod-analyzer
         image: jeffgyf/consoleapi
-        env:
-          - name: CONSOLE_API_PRIVILEGED_MODE
-            value: "true"
-        securityContext:
-          privileged: true
-        stdin: true
-        stdinOnce: true
-        tty: true
+        ports:
+        - containerPort: 10080

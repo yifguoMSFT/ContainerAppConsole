@@ -13,7 +13,7 @@ namespace ConsoleApi
         private byte[] buffer;
         public WebSocket WebSocket;
         public bool IsConnected => WebSocket.State == WebSocketState.Open;
-        public WebSocketWrapper(WebSocket webSocket, int? bufferSize = null, byte[] buffer = null)
+        public WebSocketWrapper(WebSocket webSocket, int? bufferSize = 4096, byte[] buffer = null)
         {
             this.WebSocket = webSocket;
             this.buffer = buffer ?? new byte[bufferSize.Value];
@@ -38,6 +38,11 @@ namespace ConsoleApi
         {
             var bytes = Encoding.UTF8.GetBytes(msg);
             return WebSocket.SendAsync(new ArraySegment<byte>(bytes, 0, bytes.Length), WebSocketMessageType.Text, true, CancellationToken.None); ;
+        }
+
+        public Task SendAsync(byte[] b)
+        {
+            return WebSocket.SendAsync(new ArraySegment<byte>(b, 0, b.Length), WebSocketMessageType.Text, true, CancellationToken.None); ;
         }
 
         public async Task<string> RecvAsync()

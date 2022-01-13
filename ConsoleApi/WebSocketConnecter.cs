@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
@@ -32,11 +33,13 @@ namespace ConsoleApi
                 if (taskA?.IsCompleted != false)
                 {
                     taskA = a.ReceiveAsync(new ArraySegment<byte>(bufferA), cancellationTokenSource.Token);
+                    var result = Encoding.UTF8.GetString(bufferA);
                 }
 
                 if (taskB?.IsCompleted != false)
                 {
                     taskB = b.ReceiveAsync(new ArraySegment<byte>(bufferB), cancellationTokenSource.Token);
+                    var result = Encoding.UTF8.GetString(bufferB);
                 }
 
                 await Task<WebSocketReceiveResult>.WhenAny(taskA, taskB);
@@ -45,7 +48,8 @@ namespace ConsoleApi
                 {
                     await CopyAsync(b, taskA.Result, bufferA);
                 }
-                else
+
+                if (taskB.IsCompleted)
                 {
                     await CopyAsync(a, taskB.Result, bufferB);
                 }

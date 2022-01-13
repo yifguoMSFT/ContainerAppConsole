@@ -10,4 +10,4 @@ spec:
   - port: 80
     targetPort: 10080
   selector:
-    property: console-enabled
+    name: pod-analyzer

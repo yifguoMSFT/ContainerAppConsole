@@ -38,7 +38,7 @@ namespace ConsoleApi
                     {
                         builder.SetIsOriginAllowed(origin =>
                         {
-                            bool allowed = Debugger.IsAttached || new[] { "localhost", "console-ui.westus2.cloudapp.azure.com" }.Contains(new Uri(origin).Host);
+                            bool allowed = Debugger.IsAttached || new[] { "localhost", "console-ui.eastus.cloudapp.azure.com" }.Contains(new Uri(origin).Host);
                             return allowed;
                         });
                     });

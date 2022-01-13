@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using k8s;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -8,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -146,10 +148,11 @@ namespace ConsoleApi
 
 
         [HttpGet("/console")]
-        public async Task Console()
+        public async Task Console(string podName, string command = "bash", string protocol = "v4.channel.k8s.io")
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
+
                 var buffer = new byte[4096];
                 using (var webSocket = new WebSocketWrapper(await HttpContext.WebSockets.AcceptWebSocketAsync(), buffer: buffer))
                 {
@@ -159,17 +162,40 @@ namespace ConsoleApi
                         {
                             throw new Exception("webSocket connection failed");
                         }
-                        
-                        string nodeIp = await TryFirstHandShakeAsync(webSocket);
-                        using (var interWebSocket = new ClientWebSocket())
-                        {
-                            await interWebSocket.ConnectAsync(new Uri($"ws://{nodeIp}:10080/inter-console"), CancellationToken.None);
-                            if (interWebSocket.State != WebSocketState.Open)
-                            {
-                                throw new Exception("Failed to connect to inter websocket");
-                            }
 
-                            using (var connector = new WebSocketConnecter(webSocket.WebSocket, interWebSocket, buffer, new byte[4096]))
+                        var config = KubernetesClientConfiguration.InClusterConfig();
+                        var client = new Kubernetes(config);
+                        var pods = client.ListNamespacedPod("k8se-apps");
+                        var pod = pods.Items.Where(p => p.Metadata.Name == podName).FirstOrDefault();
+                        if (pod == null)
+                        {
+                            await webSocket.SendAsync($"Pod {podName} not found");
+                            return;
+                        }
+                        else
+                        {
+                            await webSocket.SendAsync($"Pod {podName} found");
+                        }
+
+                        using (var wsClient = await client.WebSocketNamespacedPodExecAsync(pod.Metadata.Name, "k8se-apps", new[] { command }, pod.Spec.Containers[0].Name, tty: false, webSocketSubProtol: protocol))
+                        {
+                            await webSocket.SendAsync($"ws connection with k8s api established");
+                            /*var wsClientWrapper = new WebSocketWrapper(wsClient);
+                            var result = await wsClientWrapper.RecvAsync();
+                            await webSocket.SendAsync(result);
+                            result = await wsClientWrapper.RecvAsync();
+                            await webSocket.SendAsync(result);
+                            result = await wsClientWrapper.RecvAsync();
+                            await webSocket.SendAsync(result);
+                            await wsClientWrapper.SendAsync(Encoding.UTF8.GetBytes("ls\n").Prepend((byte)0).ToArray());
+                            while (true)
+                            {
+                                result = await wsClientWrapper.RecvAsync();
+                                await webSocket.SendAsync(result);
+                            }//*/
+
+
+                            using (var connector = new WebSocketConnecter(webSocket.WebSocket, wsClient, new byte[4096], new byte[4096]))
                             {
                                 await connector.ConnectAsync();
                             }
