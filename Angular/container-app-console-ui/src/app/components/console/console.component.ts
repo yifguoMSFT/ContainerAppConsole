@@ -27,7 +27,7 @@ export class ConsoleComponent implements OnDestroy, OnInit, AfterViewInit {
     this._selectedPod = pod;
 
     this._httpClient
-      .get(`http://${environment.endpoint}/api/containerApps/${this.selectedCapp}/consoleWebsocketUrl?podName=${pod}`, {responseType: 'text'})
+      .get(`http://${environment.endpoint}/api/containerApps/${this.selectedCapp}/consoleWebsocketUrl?podName=${pod}`, { responseType: 'text' })
       .toPromise()
       .then((url: string) => {
         if (this.webSocket != null) {
@@ -91,15 +91,27 @@ export class ConsoleComponent implements OnDestroy, OnInit, AfterViewInit {
     var arr = new Uint8Array(arrayBuffer);
     var decoder = new TextDecoder();
     switch (arr[0]) {
-      case 1: //stdout
-      case 2: //stderr
-      case 3: //k8s api server error
-        this.updateConsoleText(decoder.decode(arr.slice(1)));
+      case 0: // forwarded from k8s cluster exec endpoint
+        switch (arr[1]) {
+          case 1: //stdout
+          case 2: //stderr
+          case 3: //k8s api server error
+            this.updateConsoleText(decoder.decode(arr.slice(2)));
+            break;
+          case 4: //terminal resize
+            break;
+          default:
+            throw new Error(`unknown channel ${arr[1]}`);
+        }
         break;
-      case 4: //terminal resize
+      case 1: // Info from Proxy API
+        this.updateConsoleText("INFO: " + decoder.decode(arr.slice(1)));
+        break;
+      case 2: // Error from Proxy API
+        this.updateConsoleText("ERROR: " + decoder.decode(arr.slice(1)));
         break;
       default:
-        throw new Error(`unknown channel ${arr[0]}`);
+        throw new Error(`unknown Proxy API exec signal ${arr[0]}`);
     }
   }
 
@@ -124,7 +136,7 @@ export class ConsoleComponent implements OnDestroy, OnInit, AfterViewInit {
     if (this.webSocket && this.webSocket.readyState === this.webSocket.OPEN) {
       var encoder = new TextEncoder();
       var arr = encoder.encode(text);
-      this.webSocket.send(new Blob([new Uint8Array([0]), arr]));
+      this.webSocket.send(new Blob([new Uint8Array([0, 0]), arr]));
     }
   }
 
@@ -151,5 +163,27 @@ export class ConsoleComponent implements OnDestroy, OnInit, AfterViewInit {
 
   ngOnDestroy() {
     this._websocketService.close();
+  }
+
+  onClick(value: string) {
+    var url = value;
+    if (this.webSocket != null) {
+      this.webSocket.close();
+      this.term.underlying.reset();
+    }
+    try {
+      this.webSocket = new WebSocket(url);
+    } catch (e) {
+      console.log(e);
+    }
+    this.webSocket.onmessage = async (ev: MessageEvent) => {
+      if (ev.data instanceof Blob) {
+        this.processMessageBlob(ev.data);
+      } else {
+        this.updateConsoleText(ev.data + "\r\n");
+      }
+    };
+
+
   }
 }

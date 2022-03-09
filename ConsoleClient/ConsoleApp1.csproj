@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Helpers\ClusterMessageProcessor.cs" />
+    <Compile Remove="Helpers\IWebSocketConnector.cs" />
+    <Compile Remove="Helpers\IWebSocketConnectorFactory.cs" />
+    <Compile Remove="Helpers\MessageProcessors.cs" />
+    <Compile Remove="Helpers\WebSocketConnecter.cs" />
+    <Compile Remove="Helpers\WebSocketConnectorFactory.cs" />
+    <Compile Remove="Models\NamedWebsocket.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\AAPT-Antares-Containerapps\src\Microsoft.ContainerApps\Microsoft.ContainerApps.Common\Extensions\WebSocketExtension.cs" Link="WebSocketExtension.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+  </ItemGroup>
+
+</Project>

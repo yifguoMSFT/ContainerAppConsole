@@ -12,11 +12,14 @@
     .xterm {
         height:750px;
     }
+
+    input{
+        width: 1000px;
+    }
 }
-.console {
-    background-color: black;
-    color: aliceblue;
-    padding: 0px 5px;
+.terminal-outer {
+
+    margin-top: 15px;
 }
 
 .console-input {
