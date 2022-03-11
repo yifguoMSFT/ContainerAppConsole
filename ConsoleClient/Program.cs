@@ -3,7 +3,10 @@ using Microsoft.ContainerApps.ProxyApi.Helpers;
 using Microsoft.ContainerApps.ProxyApi.Models;
 using System;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Security;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +29,11 @@ namespace ConsoleApp1
                     Environment.Exit(-1);
                 }
                 wsClient = new ClientWebSocket();
+                var wsOptions = wsClient.Options;
+                var cert = GetCertificate("rdfetestsslclientcert.antares-test.windows-int.net");//new X509Certificate2(@"F:\Downloads\rdfe.cer");
+
+                //wsOptions.ClientCertificates.Add(cert);
+                //wsOptions.RemoteCertificateValidationCallback += (object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) => true;
                 await wsClient.ConnectAsync(new Uri(url), CancellationToken.None);
                 if (!wsClient.EnsureConnected())
                 {
@@ -47,6 +55,7 @@ namespace ConsoleApp1
                         {
                             await wsClient.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
                             isConnected = false;
+                            break;
                         }
                         var recv = wsHelper.Disassemble(buffer.Slice(0, recvResult.Count));
                         var dataBytes = recv.DataBytes;
@@ -96,6 +105,20 @@ namespace ConsoleApp1
                 await wsClient.EnsureClosedAsync(TimeSpan.FromSeconds(10));
                 wsClient.Dispose();
             }
+        }
+        public static X509Certificate2 GetCertificate(string name)
+        {
+            var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadOnly);
+
+            var results = store.Certificates.Find(X509FindType.FindBySubjectName, name, false);
+            if (results.Count == 0)
+            {
+                throw new Exception(string.Format("Certificate with thumbprint {0} not found", name));
+            }
+
+            store.Close();
+            return results[0];
         }
     }
 }
